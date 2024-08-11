@@ -1,0 +1,18 @@
+{
+	"langrev": "1",
+	"warnings": ["no-unused"],
+	"authors": [],
+	"version": "0.1.0",
+	"dependency-search-paths": [],
+	"dependencies": [],
+	"features": [],
+	"linked-libraries": [],
+	"sources": ["./*"],
+	"targets": {
+		"main": {
+			"type": "executable",
+			"sources-add": ["./test/main.c3"]
+		}
+	},
+	"output": "./build"
+}
