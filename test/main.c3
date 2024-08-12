@@ -4,9 +4,11 @@ import std::math;
 import std::collections::list;
 import xml;
 
-const XML_STRING = `<registry>
+const XML1 = `<registry>
 </registry>`;
 
+const XML2 = `<command queues="graphics" renderpass="inside" cmdbufferlevel="primary,secondary" tasks="state"></command>`;
+
 fn void! main() {
-    xml::Node root_node = xml::parse_string(XML_STRING)!!;
+    xml::Node root_node = xml::parse_string(XML2)!!;
 }

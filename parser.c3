@@ -4,16 +4,14 @@ import std::io;
 import std::core;
 import std::math;
 import std::collections::list;
+import std::collections::map;
 
-struct Attribute {
-	String name;
-	String value;
-}
+def Attribute = HashMap(<String, String>);
 
 struct Node {
 	String name;
 	String value;
-	List(<Attribute>) attributes;
+	Attribute attributes;
 	List(<Node>) children;
 }
 
@@ -23,7 +21,7 @@ struct Parser {
 	InStream stream;
 	XMLToken token;
 	Node active_node;
-	char current;
+	char current_char;
 	uint line;
 }
 
@@ -41,21 +39,16 @@ enum XMLToken @local
 	START_DOCUMENT,
 	END_DOCUMENT,
 	START_TAG,
-	END_TAG,
 	CLOSE_TAG,
+	END_TAG,
 	ATTRIBUTE_START,
-	ATTRIBUTE_END,
 	TEXT,
 	COMMENT,
 }
 
-enum SeekDirection @local
-{
-	FORWARD,
-	BACKWARD,
-}
+def SearchCallback = fn bool (char value);
 
-fn void! Parser.advance(&self)
+fn XMLToken! Parser.advance(&self)
 {
 	char c;
 	while WS: (c = self.read_next()!)
@@ -65,7 +58,6 @@ fn void! Parser.advance(&self)
 			case '\n':
 				self.line++;
 				nextcase;
-			case ' ':
 			case '\t':
 			case '\r':
 			case '\v':
@@ -78,29 +70,73 @@ fn void! Parser.advance(&self)
 	switch (c)
 	{
 		case '<':
+			if (self.peek(fn (character) => character == '/')!) {
+				self.token = XMLToken.CLOSE_TAG;
+				self.stream.seek(self.active_node.name.len + 1, Seek.CURSOR)!;
+				break;
+			}
+			
 			self.token = XMLToken.START_TAG;
-		case '>':
-			self.token = XMLToken.END_TAG;
+			// Read token name
+			while (self.peek(fn (character) => character != ' ' && character != '>')!) {
+				c = self.read_next()!;
+				self.buffer.append_char(c);
+			}
 		case '/':
 			self.token = XMLToken.CLOSE_TAG;
+		case '>':
+			self.token = XMLToken.END_TAG;
+		case ' ':
+			self.token = XMLToken.ATTRIBUTE_START;
+			usz! attribute_size = self.seek(fn (character) => character == '"', .skip = 1);
+
+			if (catch err = attribute_size) {
+				io::printfn("failed to parse attribute");
+				return XMLParserError.UNEXPECTED_CHARACTER?;
+			}
+			// Set stream back to start pos
+			self.stream.seek(-(attribute_size + 2), Seek.CURSOR)!;
+
+			// Add whole attribute to buffer
+			for (uint i; i < attribute_size + 2; i++) {
+				self.buffer.append_char(self.read_next()!);
+			};
 		default:
 			io::printfn("not found char %c", c);
 			return XMLParserError.UNEXPECTED_CHARACTER?;
 	}
+
+	return self.token;
 }
 
-fn usz! Parser.seek(&self, char value)
+
+
+fn usz! Parser.seek(&self, SearchCallback search, uint skip = 0)
 {
 	char c;
 	usz offset;
+	uint skipped = 0;
 	// Find the char
 	while (c = self.stream.read_byte()!) {
-		if (c == value) break;
+		if (search(c)) {
+			if (skipped == skip) {break;}
+			else {
+				skipped += 1; 
+				continue;
+			};
+		};
+	
 		offset++;
 	};
-	// Set stream back to start pos
-	self.stream.seek(-(offset + 1), Seek.CURSOR)!;
 	return offset;
+}
+
+fn bool! Parser.peek(&self, SearchCallback search)
+{
+	bool response = search(self.stream.read_byte()!);
+	// Set stream back to start pos
+	self.stream.seek(-1, Seek.CURSOR)!;
+	return response;
 }
 
 fn char! Parser.read_next(&self)
@@ -139,38 +175,36 @@ fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 
 	@pool(allocator)
 	{
-		// for (uint i = 0; i < 10; i++) {
-		// 	XMLToken token = parser.advance()!;
-		// 	switch (parser.token) {
-		// 		case START_TAG: {
-		// 			usz name_end_pos = parser.seek('>')!;
-		// 			io::printfn("name %d", name_end_pos);
-		// 		}
-		// 		default: {
-		// 			break;
-		// 		}
-		// 	}
-		// 	io::printfn("token %s", token);
-		// }
+		while (try parser.advance()) {
+			io::printfn("token %s", parser.token);
+			switch (parser.token) {
+				case START_TAG: {
+					// Add new node
+					parser.active_node.name = parser.buffer.copy_str();
+					parser.buffer.clear();
+					io::printfn("%s", parser.active_node.name);
+				}
+				case END_TAG: 
+				case CLOSE_TAG: {
+					// Add new node
+					// parser.active_node.name = parser.buffer.copy_str();
+					// parser.buffer.clear();
+					// io::printfn("%s", parser.active_node.name);
+				}
+				case ATTRIBUTE_START: {
+					// Add new node
+					String[] attribute = parser.buffer.str_view().split("=");
+					parser.active_node.attributes.set(attribute[0].copy(), attribute[1].copy());
+					io::printfn("attribute %s", attribute);
 
-		parser.advance()!;
-
-		switch (parser.token) {
-			case START_TAG: {
-				usz name_size = parser.seek('>')!;
-				char[] buffer = allocator::new_array(allocator, char, name_size);
-				parser.stream.read(buffer)!;
-				parser.active_node.name = (String)buffer;
-			}
-			default: {
-				break;
+					parser.buffer.clear();
+					free(attribute);
+				}
+				default: {
+					break;
+				}
 			}
 		}
-		io::printfn("token %s", parser.token);
-		io::printfn("node name %s", parser.active_node.name);
-		// while (parser.token != END_DOCUMENT) {
-		// 	XMLToken token = parser.advance();
-		// }
 	};
 
 	return root_node;
