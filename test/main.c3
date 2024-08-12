@@ -11,4 +11,5 @@ const XML2 = `<command queues="graphics" renderpass="inside" cmdbufferlevel="pri
 
 fn void! main() {
     xml::Node root_node = xml::parse_string(XML2)!!;
+    defer root_node.free();
 }

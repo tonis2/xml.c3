@@ -71,9 +71,8 @@ fn XMLToken! Parser.advance(&self)
 	{
 		case '<':
 			if (self.peek(fn (character) => character == '/')!) {
-				self.token = XMLToken.CLOSE_TAG;
 				self.stream.seek(self.active_node.name.len + 1, Seek.CURSOR)!;
-				break;
+				nextcase;
 			}
 			
 			self.token = XMLToken.START_TAG;
@@ -160,6 +159,12 @@ fn char! Parser.read_next(&self)
 fn void Parser.free(&self)
 {
 	self.buffer.free();
+}
+
+fn void Node.free(&self)
+{
+	self.attributes.free();
+	self.children.free();
 }
 
 fn Node! parse_string(String s, Allocator allocator = allocator::heap())
