@@ -21,7 +21,7 @@ struct Parser {
 	DString buffer;
 	InStream stream;
 	XMLToken token;
-	Node active_node;
+	Node* active_node;
 	Node* prev_node;
 	uint line;
 }
@@ -30,9 +30,6 @@ fault XMLParserError
 {
 	EOF,
 	UNEXPECTED_CHARACTER,
-	INVALID_ESCAPE_SEQUENCE,
-	DUPLICATE_MEMBERS,
-	INVALID_NUMBER,
 }
 
 enum XMLToken @local
@@ -44,7 +41,6 @@ enum XMLToken @local
 	END_TAG,
 	ATTRIBUTE_START,
 	TEXT,
-	COMMENT,
 }
 
 def SearchCallback = fn bool (char value);
@@ -52,7 +48,7 @@ def SearchCallback = fn bool (char value);
 fn XMLToken! Parser.advance(&self)
 {
 	char c;
-	while WS: (c = self.read_next()!)
+	while WS: (c = self.stream.read_byte()!)
 	{
 		switch (c)
 		{
@@ -80,16 +76,16 @@ fn XMLToken! Parser.advance(&self)
 			self.token = XMLToken.START_TAG;
 			// Read token name
 			while (self.peek(fn (character) => character != ' ' && character != '>')!) {
-				c = self.read_next()!;
+				c = self.stream.read_byte()!;
 				self.buffer.append_char(c);
 			}
+
 		case c == '/':
 			self.token = XMLToken.CLOSE_TAG;
+
 		case c == '>':
 			self.token = XMLToken.END_TAG;
-			if (self.peek(fn (character) => character == '<')!) {
-				io::printfn("new node starts");
-			}
+
 		case std::ascii::is_print(c):
 			self.token = XMLToken.ATTRIBUTE_START;
 			usz! attribute_size = self.seek(fn (character) => character == '"', .skip = 1);
@@ -103,7 +99,7 @@ fn XMLToken! Parser.advance(&self)
 
 			// Add whole attribute to buffer
 			for (uint i; i < attribute_size + 3; i++) {
-				self.buffer.append_char(self.read_next()!);
+				self.buffer.append_char(self.stream.read_byte()!);
 			};
 		default:
 			io::printfn("not found char %c", c);
@@ -143,24 +139,6 @@ fn bool! Parser.peek(&self, SearchCallback search)
 	return response;
 }
 
-fn char! Parser.read_next(&self)
-{
-	char! c = self.stream.read_byte()!;
-	if (catch err = c)
-	{
-		case XMLParserError.EOF:
-			self.token = END_DOCUMENT;
-			return err?;
-		default:
-			return err?;
-	}
-	if (c == 0)
-	{
-		self.token = END_DOCUMENT;
-	}
-	return c;
-}
-
 fn void Parser.free(&self)
 {
 	self.buffer.free();
@@ -173,15 +151,13 @@ fn void Node.free(&self)
 	self.children.free();
 }
 
-fn Node! parse_string(String s, Allocator allocator = allocator::heap())
-{
-	return parse(ByteReader{}.init(s), allocator);
-}
+fn Node! parse_string(String s, Allocator allocator = allocator::heap()) => parse(ByteReader{}.init(s), allocator);
+
 
 fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 {
 	Node root_node;
-	Parser parser = { .buffer = dstring::new_with_capacity(64, allocator), .stream = s, .allocator = allocator, .active_node = root_node };
+	Parser parser = { .buffer = dstring::new_with_capacity(64, allocator), .stream = s, .allocator = allocator, .active_node = &root_node };
 	defer parser.free();
 
 	@pool(allocator)
@@ -190,32 +166,22 @@ fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 			switch (parser.token) {
 				case START_TAG: {
 					if (parser.prev_node != null) {
-						io::printfn("prev_node %s", parser.active_node.name);
-						// Node* prev_node = parser.prev_node;
 						parser.prev_node.children.push(Node {});
-						io::printfn("children len %d", parser.prev_node.children.len());
 					}
-
 					// Add new node
 					parser.active_node.name = parser.buffer.copy_str();
 					parser.buffer.clear();
-				
 				}
 				case END_TAG: {
 					parser.prev_node = parser.active_node;
-					io::printfn("prev node %s", parser.prev_node.name);
 				}
 				case CLOSE_TAG: {
 					// Add new node
-					// parser.active_node.name = parser.buffer.copy_str();
-					// parser.buffer.clear();
-					// io::printfn("%s", parser.active_node.name);
 				}	
 				case ATTRIBUTE_START: {
 					// Add new attribute
 					String[] attribute = parser.buffer.str_view().split("=");
 					parser.active_node.attributes.set(attribute[0].copy(), attribute[1].copy());
-					// io::printfn("attribute %s", attribute);
 
 					parser.buffer.clear();
 					free(attribute);
@@ -227,7 +193,6 @@ fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 		}
 	};
 
-	io::printfn("%d", parser.prev_node.children.len());
 	return root_node;
 }
 
