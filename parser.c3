@@ -5,6 +5,7 @@ import std::core;
 import std::math;
 import std::collections::list;
 import std::collections::map;
+import std::ascii;
 
 def Attribute = HashMap(<String, String>);
 
@@ -21,7 +22,7 @@ struct Parser {
 	InStream stream;
 	XMLToken token;
 	Node active_node;
-	char current_char;
+	Node* prev_node;
 	uint line;
 }
 
@@ -58,6 +59,7 @@ fn XMLToken! Parser.advance(&self)
 			case '\n':
 				self.line++;
 				nextcase;
+			case ' ':
 			case '\t':
 			case '\r':
 			case '\v':
@@ -67,9 +69,9 @@ fn XMLToken! Parser.advance(&self)
 		}
 	}
 
-	switch (c)
+	switch (true)
 	{
-		case '<':
+		case c == '<':
 			if (self.peek(fn (character) => character == '/')!) {
 				self.stream.seek(self.active_node.name.len + 1, Seek.CURSOR)!;
 				nextcase;
@@ -81,11 +83,14 @@ fn XMLToken! Parser.advance(&self)
 				c = self.read_next()!;
 				self.buffer.append_char(c);
 			}
-		case '/':
+		case c == '/':
 			self.token = XMLToken.CLOSE_TAG;
-		case '>':
+		case c == '>':
 			self.token = XMLToken.END_TAG;
-		case ' ':
+			if (self.peek(fn (character) => character == '<')!) {
+				io::printfn("new node starts");
+			}
+		case std::ascii::is_print(c):
 			self.token = XMLToken.ATTRIBUTE_START;
 			usz! attribute_size = self.seek(fn (character) => character == '"', .skip = 1);
 
@@ -94,10 +99,10 @@ fn XMLToken! Parser.advance(&self)
 				return XMLParserError.UNEXPECTED_CHARACTER?;
 			}
 			// Set stream back to start pos
-			self.stream.seek(-(attribute_size + 2), Seek.CURSOR)!;
+			self.stream.seek(-(attribute_size + 3), Seek.CURSOR)!;
 
 			// Add whole attribute to buffer
-			for (uint i; i < attribute_size + 2; i++) {
+			for (uint i; i < attribute_size + 3; i++) {
 				self.buffer.append_char(self.read_next()!);
 			};
 		default:
@@ -163,6 +168,7 @@ fn void Parser.free(&self)
 
 fn void Node.free(&self)
 {
+	foreach (child: self.children) child.free();
 	self.attributes.free();
 	self.children.free();
 }
@@ -181,26 +187,35 @@ fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 	@pool(allocator)
 	{
 		while (try parser.advance()) {
-			io::printfn("token %s", parser.token);
 			switch (parser.token) {
 				case START_TAG: {
+					if (parser.prev_node != null) {
+						io::printfn("prev_node %s", parser.active_node.name);
+						// Node* prev_node = parser.prev_node;
+						parser.prev_node.children.push(Node {});
+						io::printfn("children len %d", parser.prev_node.children.len());
+					}
+
 					// Add new node
 					parser.active_node.name = parser.buffer.copy_str();
 					parser.buffer.clear();
-					io::printfn("%s", parser.active_node.name);
+				
 				}
-				case END_TAG: 
+				case END_TAG: {
+					parser.prev_node = parser.active_node;
+					io::printfn("prev node %s", parser.prev_node.name);
+				}
 				case CLOSE_TAG: {
 					// Add new node
 					// parser.active_node.name = parser.buffer.copy_str();
 					// parser.buffer.clear();
 					// io::printfn("%s", parser.active_node.name);
-				}
+				}	
 				case ATTRIBUTE_START: {
-					// Add new node
+					// Add new attribute
 					String[] attribute = parser.buffer.str_view().split("=");
 					parser.active_node.attributes.set(attribute[0].copy(), attribute[1].copy());
-					io::printfn("attribute %s", attribute);
+					// io::printfn("attribute %s", attribute);
 
 					parser.buffer.clear();
 					free(attribute);
@@ -212,6 +227,7 @@ fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 		}
 	};
 
+	io::printfn("%d", parser.prev_node.children.len());
 	return root_node;
 }
 
