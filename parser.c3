@@ -11,7 +11,7 @@ def Attribute = HashMap(<String, String>);
 
 struct Node {
 	String name;
-	String value;
+	DString value;
 	Attribute attributes;
 	List(<Node>) children;
 }
@@ -40,6 +40,7 @@ enum XMLToken @local
 	CLOSE_TAG,
 	END_TAG,
 	ATTRIBUTE_START,
+	VALUE_START,
 	TEXT,
 }
 
@@ -82,25 +83,40 @@ fn XMLToken! Parser.advance(&self)
 
 		case c == '/':
 			self.token = XMLToken.CLOSE_TAG;
+			usz! node_end = self.seek(fn (character) => character == '>');
+			self.stream.seek(node_end + 1, Seek.CURSOR)!;
 
 		case c == '>':
 			self.token = XMLToken.END_TAG;
-
 		case std::ascii::is_print(c):
-			self.token = XMLToken.ATTRIBUTE_START;
-			usz! attribute_size = self.seek(fn (character) => character == '"', .skip = 1);
 
-			if (catch err = attribute_size) {
-				io::printfn("failed to parse attribute");
-				return XMLParserError.UNEXPECTED_CHARACTER?;
+			if (self.token == END_TAG) {
+				// Last node ended, value starts now
+
+				self.token = XMLToken.VALUE_START;
+				self.stream.seek(-1, Seek.CURSOR)!;
+
+				while (self.peek(fn (character) => character != '<')!) {
+					c = self.stream.read_byte()!;
+					// io::printfn("value char %c", c);
+					self.buffer.append_char(c);
+				}
+			} else {
+				self.token = XMLToken.ATTRIBUTE_START;
+				usz! attribute_size = self.seek(fn (character) => character == '"', .skip = 1);
+
+				if (catch err = attribute_size) {
+					io::printfn("failed to parse attribute");
+					return XMLParserError.UNEXPECTED_CHARACTER?;
+				}
+				// Set stream back to start pos
+				self.stream.seek(-(attribute_size + 3), Seek.CURSOR)!;
+
+				// Add whole attribute to buffer
+				for (uint i; i < attribute_size + 3; i++) {
+					self.buffer.append_char(self.stream.read_byte()!);
+				};
 			}
-			// Set stream back to start pos
-			self.stream.seek(-(attribute_size + 3), Seek.CURSOR)!;
-
-			// Add whole attribute to buffer
-			for (uint i; i < attribute_size + 3; i++) {
-				self.buffer.append_char(self.stream.read_byte()!);
-			};
 		default:
 			io::printfn("not found char %c", c);
 			return XMLParserError.UNEXPECTED_CHARACTER?;
@@ -163,10 +179,14 @@ fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 	@pool(allocator)
 	{
 		while (try parser.advance()) {
+			io::printfn("token %s", parser.token);
 			switch (parser.token) {
 				case START_TAG: {
-					if (parser.prev_node != null) {
-						parser.prev_node.children.push(Node {});
+					Node* prev_node = parser.prev_node;
+
+					if (prev_node != null) {
+						prev_node.children.push(Node {});
+						parser.active_node = &prev_node.children[prev_node.children.len() - 1];
 					}
 					// Add new node
 					parser.active_node.name = parser.buffer.copy_str();
@@ -177,7 +197,11 @@ fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 				}
 				case CLOSE_TAG: {
 					// Add new node
-				}	
+				}
+				case VALUE_START: {
+					parser.active_node.value.append_string(parser.buffer.copy());
+					parser.buffer.clear();
+				}
 				case ATTRIBUTE_START: {
 					// Add new attribute
 					String[] attribute = parser.buffer.str_view().split("=");
