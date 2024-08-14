@@ -11,7 +11,7 @@ def Attribute = HashMap(<String, String>);
 
 struct Node {
 	String name;
-	DString value;
+	String value;
 	Attribute attributes;
 	List(<Node>) children;
 }
@@ -21,6 +21,7 @@ struct Parser {
 	DString buffer;
 	InStream stream;
 	XMLToken token;
+	XMLToken prev_token;
 	Node* active_node;
 	Node* prev_node;
 	uint line;
@@ -66,6 +67,7 @@ fn XMLToken! Parser.advance(&self)
 		}
 	}
 
+	self.prev_token = self.token;
 	switch (true)
 	{
 		case c == '<':
@@ -75,6 +77,7 @@ fn XMLToken! Parser.advance(&self)
 			}
 			
 			self.token = XMLToken.START_TAG;
+
 			// Read token name
 			while (self.peek(fn (character) => character != ' ' && character != '>')!) {
 				c = self.stream.read_byte()!;
@@ -84,31 +87,32 @@ fn XMLToken! Parser.advance(&self)
 		case c == '/':
 			self.token = XMLToken.CLOSE_TAG;
 			usz! node_end = self.seek(fn (character) => character == '>');
-			self.stream.seek(node_end + 1, Seek.CURSOR)!;
+			self.stream.seek(node_end - 1, Seek.CURSOR)!;
 
 		case c == '>':
 			self.token = XMLToken.END_TAG;
+
 		case std::ascii::is_print(c):
-
 			if (self.token == END_TAG) {
-				// Last node ended, value starts now
-
+				// Last tag was node end, so text must be for node value
 				self.token = XMLToken.VALUE_START;
 				self.stream.seek(-1, Seek.CURSOR)!;
 
+				//usz value_size = self.seek(fn (character) => character == '<')!;
+		
 				while (self.peek(fn (character) => character != '<')!) {
-					c = self.stream.read_byte()!;
-					// io::printfn("value char %c", c);
-					self.buffer.append_char(c);
+					self.buffer.append_char(self.stream.read_byte()!);
 				}
 			} else {
 				self.token = XMLToken.ATTRIBUTE_START;
+			
 				usz! attribute_size = self.seek(fn (character) => character == '"', .skip = 1);
 
 				if (catch err = attribute_size) {
 					io::printfn("failed to parse attribute");
 					return XMLParserError.UNEXPECTED_CHARACTER?;
 				}
+
 				// Set stream back to start pos
 				self.stream.seek(-(attribute_size + 3), Seek.CURSOR)!;
 
@@ -179,27 +183,29 @@ fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 	@pool(allocator)
 	{
 		while (try parser.advance()) {
-			io::printfn("token %s", parser.token);
+			//io::printfn("token %s", parser.token);
 			switch (parser.token) {
 				case START_TAG: {
 					Node* prev_node = parser.prev_node;
 
+					if (parser.prev_token != CLOSE_TAG) {
+						parser.prev_node = parser.active_node;
+					}
+
+					// Add new node
 					if (prev_node != null) {
 						prev_node.children.push(Node {});
 						parser.active_node = &prev_node.children[prev_node.children.len() - 1];
 					}
-					// Add new node
+
 					parser.active_node.name = parser.buffer.copy_str();
 					parser.buffer.clear();
 				}
-				case END_TAG: {
-					parser.prev_node = parser.active_node;
-				}
-				case CLOSE_TAG: {
-					// Add new node
-				}
+				case END_TAG: {}
+				case CLOSE_TAG: {}
 				case VALUE_START: {
-					parser.active_node.value.append_string(parser.buffer.copy());
+					// Copy buffer to node value
+					parser.active_node.value = parser.buffer.copy_str();
 					parser.buffer.clear();
 				}
 				case ATTRIBUTE_START: {
