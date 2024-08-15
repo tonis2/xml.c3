@@ -6,8 +6,7 @@ import xml;
 
 const XML1 = `<command queues="graphics" renderpass="inside" cmdbufferlevel="primary,secondary" tasks="state">
                     <registry name="test">TEST</registry>
-                    <registry2 name="test2">
-                    </registry2>
+                    <registry2 name="test2"></registry2>
               </command>`;
 
 
@@ -23,18 +22,22 @@ const XML2 = `<videocodec name="Decode">
             </videocodec>`;             
 
 fn void! main() {
-    xml::Node root_node_1 = xml::parse_string(XML1)!!;
-    xml::Node root_node_2 = xml::parse_string(XML2)!!;
+    xml::Document doc1 = xml::parse_string(XML1)!!;
+    // xml::Document doc2 = xml::parse_string(XML2)!!;
+
+    assert(doc1.root.name == "command");
+    assert(doc1.root.children[0].name == "registry");
+    assert(doc1.root.children[1].name == "registry2");
+    assert(doc1.root.children[0].value == "TEST");
+    assert(doc1.root.children.len() == 2);
 
     defer {
-        root_node_1.free();
-        root_node_2.free();
+        doc1.free();
+        // doc2.free();
     };
 
-    assert(root_node_1.name == "command");
-    assert(root_node_1.children[0].name == "registry");
-    assert(root_node_1.children[1].name == "registry2");
-    assert(root_node_1.children[0].value == "TEST");
-    assert(root_node_1.children.len() == 2);
+    // foreach (child: doc1.children) {
+    //     io::printfn("node name %s %s %d", child.name, child.value, child.closed);
+    // }
 
 }
