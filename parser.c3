@@ -94,7 +94,7 @@ fn XMLToken! Parser.advance(&self)
 		case c == '<': {
 			// If next is /, its close tag
 			if (self.peek(fn (character) => character == '/')!) nextcase;
-			// If next is !, its header tag
+			//If next is !, its header tag
 			// if (self.peek(fn (character) => character == '!')!) nextcase;
 
 			self.token = XMLToken.START_TAG;
@@ -105,7 +105,10 @@ fn XMLToken! Parser.advance(&self)
 			}
 		}
 		// case c == '!': {
-		
+		// 	self.token = XMLToken.HEADER;
+		// 		while (self.peek(fn (character) => character != '>')!) {
+		// 		self.buffer.append_char(self.stream.read_byte()!);
+		// 	}
 		// }
 		case c == '/': {
 			self.token = XMLToken.CLOSE_TAG;
