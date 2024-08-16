@@ -18,12 +18,11 @@ const XML2 = `<videocodec name="Decode">
                     <videorequirecapabilities struct="VkVideoDecodeCapabilitiesKHR" member="flags" value="VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_COINCIDE_BIT_KHR"/>
                 </videoformat>
                 <videoformat name="Decode Output (Distinct)" usage="VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR">
-                   
                 </videoformat>
                 <videoformat name="DPB" usage="VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR"/>
             </videocodec>`;             
 
-fn void! xml_parsing() {
+fn void! xml_string_parsing() {
     xml::Document doc1 = xml::parse_string(XML1)!!;
     xml::Document doc2 = xml::parse_string(XML2)!!;
 
@@ -49,4 +48,24 @@ fn void! xml_parsing() {
     assert(doc2.root.children[3].attributes.get("name")! == "DPB");
     assert(doc2.root.children[3].attributes.get("usage")! == "VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR");
     assert(doc2.children.len() == 6);
+
+    // Search
+    NodeList video_formats;
+    defer video_formats.free();
+    
+    doc2.root.find(fn (node) => node.name == "videoformat", &video_formats);
+
+    assert(video_formats.len() == 3);
+    assert(video_formats[0].attributes.len() == 2);
+}
+
+fn void! xml_file_parsing() {
+    xml::Document html = xml::load_file("assets/test.html")!;
+    defer html.free();
+
+    assert(html.header == "DOCTYPE html");
+    assert(html.root.name == "html");
+    assert(html.root.children.len() == 1);
+    assert(html.root.children[0].children[0].value == "My First Heading");
+    assert(html.root.children[0].children[1].value == "My first paragraph.");
 }

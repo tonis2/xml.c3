@@ -8,9 +8,11 @@ import std::collections::map;
 import std::ascii;
 
 def Attribute = HashMap(<String, String>);
+def NodeList = List(<Node*>);
 
 struct Document {
 	Node* root;
+	String header;
 	List(<Node>) children;
 }
 
@@ -36,6 +38,7 @@ fault XMLParserError
 {
 	EOF,
 	UNEXPECTED_CHARACTER,
+	FILE_NOT_FOUND
 }
 
 enum XMLToken @local
@@ -47,9 +50,17 @@ enum XMLToken @local
 	END_TAG,
 	ATTRIBUTE_START,
 	VALUE_START,
+	HEADER,
 }
 
-def SearchCallback = fn bool (char value);
+def NodeSearch = fn bool (Node*);
+def ParserSearch = fn bool (char value);
+
+fn void Node.find(&self, NodeSearch search_fn, NodeList* cache) {
+	if (search_fn(self)) cache.push(self);
+
+	foreach (child: self.children) child.find(search_fn, cache);
+}
 
 fn XMLToken! Parser.advance(&self)
 {
@@ -72,26 +83,38 @@ fn XMLToken! Parser.advance(&self)
 	}
 
 	switch (true)
-	{
-		case c == '<':
+	{	
+		case c == '<' && self.peek(fn (character) => character == '!')! : {
+			self.token = XMLToken.HEADER;
+			self.stream.seek(1, Seek.CURSOR)!;
+			while (self.peek(fn (character) => character != '>')!) {
+				self.buffer.append_char(self.stream.read_byte()!);
+			}
+		}
+		case c == '<': {
 			// If next is /, its close tag
 			if (self.peek(fn (character) => character == '/')!) nextcase;
-			
+			// If next is !, its header tag
+			// if (self.peek(fn (character) => character == '!')!) nextcase;
+
 			self.token = XMLToken.START_TAG;
 
 			// Read token name
 			while (self.peek(fn (character) => character != ' ' && character != '>')!) {
 				self.buffer.append_char(self.stream.read_byte()!);
 			}
-
-		case c == '/':
+		}
+		// case c == '!': {
+		
+		// }
+		case c == '/': {
 			self.token = XMLToken.CLOSE_TAG;
 			self.seek(fn (character) => character == '>')!;
-
-		case c == '>':
+		}
+		case c == '>': {
 			self.token = XMLToken.END_TAG;
 			break;
-
+		}
 		case std::ascii::is_print(c) && self.token == END_TAG: {
 			// Read node value
 			self.token = XMLToken.VALUE_START;
@@ -130,7 +153,7 @@ fn XMLToken! Parser.advance(&self)
 
 
 
-fn usz! Parser.seek(&self, SearchCallback search, uint skip = 0, bool debug = false, bool return_pos = false)
+fn usz! Parser.seek(&self, ParserSearch search, uint skip = 0, bool debug = false, bool return_pos = false)
 {
 	usz offset;
 	uint skipped = 0;
@@ -152,7 +175,7 @@ fn usz! Parser.seek(&self, SearchCallback search, uint skip = 0, bool debug = fa
 	return offset;
 }
 
-fn bool! Parser.peek(&self, SearchCallback search)
+fn bool! Parser.peek(&self, ParserSearch search)
 {
 	bool response = search(self.stream.read_byte()!);
 	// Set stream back to start pos
@@ -200,6 +223,18 @@ fn Node* Parser.prev_node(&self)
 
 fn Document! parse_string(String s, Allocator allocator = allocator::heap()) => parse(ByteReader{}.init(s), allocator);
 
+fn Document! load_file (String path, Allocator allocator = allocator::heap()) {
+    File! file = file::open(path, "r");
+    defer file.close()!!;
+
+    if (catch err = file) {
+        io::printfn("Failed to find the gltf file");
+        return XMLParserError.FILE_NOT_FOUND?;
+    }
+
+    return parse(&file, allocator);
+}
+
 
 fn Document! parse(InStream s, Allocator allocator = allocator::heap())
 {
@@ -241,9 +276,12 @@ fn Document! parse(InStream s, Allocator allocator = allocator::heap())
 					// Add new attribute
 					String[] attribute = parser.buffer.str_view().split("=");
 					parser.current_node().attributes.set(attribute[0].copy(), attribute[1].copy().trim("\""));
-
 					parser.buffer.clear();
 					free(attribute);
+				}
+				case HEADER: {
+					parser.doc.header = parser.buffer.copy_str();
+					parser.buffer.clear();
 				}
 				default: {
 					break;
@@ -266,6 +304,8 @@ fn void Node.free(&self)
 	foreach (child: self.children) child.free();
 	self.attributes.free();
 	self.children.free();
+	self.name.free();
+	self.value.free();
 }
 
 fn void Document.free(&self)
