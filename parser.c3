@@ -29,7 +29,6 @@ struct Parser {
 	XMLToken token;
 	Document* doc;
 	usz active_node;
-	usz parent_node;
 	usz line;
 }
 
@@ -37,7 +36,6 @@ fault XMLParserError
 {
 	EOF,
 	UNEXPECTED_CHARACTER,
-	NODE_INDEX_ERROR
 }
 
 enum XMLToken @local
@@ -49,7 +47,6 @@ enum XMLToken @local
 	END_TAG,
 	ATTRIBUTE_START,
 	VALUE_START,
-	TEXT,
 }
 
 def SearchCallback = fn bool (char value);
@@ -89,11 +86,7 @@ fn XMLToken! Parser.advance(&self)
 
 		case c == '/':
 			self.token = XMLToken.CLOSE_TAG;
-			self.stream.seek(1, Seek.CURSOR)!;
-			// Save ending node name to buffer
-			while (self.peek(fn (character) => character != '>')!) {
-				self.buffer.append_char(self.stream.read_byte()!);
-			}
+			self.seek(fn (character) => character == '>')!;
 
 		case c == '>':
 			self.token = XMLToken.END_TAG;
@@ -113,7 +106,6 @@ fn XMLToken! Parser.advance(&self)
 		case std::ascii::is_print(c):
 			// Parse node attribute
 			self.token = XMLToken.ATTRIBUTE_START;
-
 			usz! attribute_size = self.seek(fn (character) => character == '"', .skip = 1);
 
 			if (catch err = attribute_size) {
@@ -153,12 +145,10 @@ fn usz! Parser.seek(&self, SearchCallback search, uint skip = 0, bool debug = fa
 				continue;
 			};
 		};
-	
 		offset++;
 	};
 
 	if (return_pos) self.stream.seek(-(offset + 1), Seek.CURSOR)!;
-
 	return offset;
 }
 
@@ -186,16 +176,15 @@ fn Node* Parser.get_parent(&self, usz offset = 0)
 	return null;
 }
 
-fn void Parser.close_node(&self, String name)
+fn void Parser.close_last_node(&self)
 {
-	// Close node by name
-	foreach (&child: self.doc.children) {
-		if (child.name == name) child.closed = true;
+	for (usz i = self.doc.children.len(); i > 0; i--) {
+		Node* node = &self.doc.children[i - 1];
+		if (node.closed == false) {
+			node.closed = true;
+			break;
+		};
 	}
-
-	// for (usz i = self.doc.children.len() + 1; i > 0; i--) {
-		
-	// }
 }
 
 fn Node* Parser.current_node(&self)
@@ -241,8 +230,7 @@ fn Document! parse(InStream s, Allocator allocator = allocator::heap())
 				}
 				case END_TAG: {}
 				case CLOSE_TAG: {
-					parser.close_node(parser.buffer.str_view());
-					parser.buffer.clear();
+					parser.close_last_node();
 				}
 				case VALUE_START: {
 					// Copy buffer to node value
@@ -252,7 +240,7 @@ fn Document! parse(InStream s, Allocator allocator = allocator::heap())
 				case ATTRIBUTE_START: {
 					// Add new attribute
 					String[] attribute = parser.buffer.str_view().split("=");
-					parser.current_node().attributes.set(attribute[0].copy(), attribute[1].copy());
+					parser.current_node().attributes.set(attribute[0].copy(), attribute[1].copy().trim("\""));
 
 					parser.buffer.clear();
 					free(attribute);

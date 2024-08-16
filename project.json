@@ -11,7 +11,7 @@
 	"targets": {
 		"main": {
 			"type": "executable",
-			"sources-add": ["./test/main.c3"]
+			"sources-add": ["./test/*"]
 		}
 	},
 	"output": "./build"
