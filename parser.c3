@@ -84,35 +84,35 @@ fn XMLToken! Parser.advance(&self)
 
 	switch (true)
 	{
+		case c == '/' && self.peek(fn (character) => character == '>')! : {
+			// Close node
+			self.token = XMLToken.CLOSE_TAG;
+			self.seek(fn (character) => character == '>')!;
+			break;
+		}
+		case c == '<' && self.peek(fn (character) => character == '/')! : {
+			// Close node
+			self.token = XMLToken.CLOSE_TAG;
+			self.seek(fn (character) => character == '>')!;
+			break;
+		}
 		case c == '<' && self.peek(fn (character) => character == '!')! : {
+			// Header node
 			self.token = XMLToken.HEADER;
 			self.stream.seek(1, Seek.CURSOR)!;
+
 			while (self.peek(fn (character) => character != '>')!) {
 				self.buffer.append_char(self.stream.read_byte()!);
 			}
+			break;
 		}
 		case c == '<': {
-			// If next is /, its close tag
-			if (self.peek(fn (character) => character == '/')!) nextcase;
-			// If next is !, its header tag
-			// if (self.peek(fn (character) => character == '!')!) nextcase;
-
+			// Start node, read name to buffer
 			self.token = XMLToken.START_TAG;
-
-			// Read token name
 			while (self.peek(fn (character) => character != ' ' && character != '>')!) {
 				self.buffer.append_char(self.stream.read_byte()!);
 			}
-		}
-		// case c == '!': {
-		// 	self.token = XMLToken.HEADER;
-		// 		while (self.peek(fn (character) => character != '>')!) {
-		// 		self.buffer.append_char(self.stream.read_byte()!);
-		// 	}
-		// }
-		case c == '/': {
-			self.token = XMLToken.CLOSE_TAG;
-			self.seek(fn (character) => character == '>')!;
+			break;
 		}
 		case c == '>': {
 			self.token = XMLToken.END_TAG;
@@ -126,7 +126,7 @@ fn XMLToken! Parser.advance(&self)
 			while (self.peek(fn (character) => character != '<')!) {
 				self.buffer.append_char(self.stream.read_byte()!);
 			}
-			// io::printfn("value buffer %s", self.buffer);
+			break;
 		}
 		case std::ascii::is_print(c): {
 			// Parse node attribute
@@ -145,6 +145,7 @@ fn XMLToken! Parser.advance(&self)
 			for (uint i; i < attribute_size + 3; i++) {
 				self.buffer.append_char(self.stream.read_byte()!);
 			};
+			break;
 		}
 		default:
 			io::printfn("not found char %c", c);
@@ -267,7 +268,7 @@ fn Document! parse(InStream s, Allocator allocator = allocator::heap())
 					if (parent_node != null) {
 						parent_node.value = parser.buffer.copy_str();
 					} else {
-						// io::printfn("parentless buffer %s", parser.buffer);
+						io::printfn("parentless buffer %s", parser.buffer);
 					}
 					parser.buffer.clear();
 				}

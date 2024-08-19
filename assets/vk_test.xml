@@ -1,0 +1,13 @@
+<registry>
+    <types comment="Vulkan type definitions">
+     <type category="define" deprecated="true">// DEPRECATED: This define is deprecated. VK_MAKE_API_VERSION should be used instead.
+#define <name>VK_MAKE_VERSION</name>(major, minor, patch) \
+    ((((uint32_t)(major)) &lt;&lt; 22U) | (((uint32_t)(minor)) &lt;&lt; 12U) | ((uint32_t)(patch)))</type>
+        <type category="define" deprecated="true">
+            // DEPRECATED: This define is deprecated. VK_API_VERSION_MAJOR should be used instead. #define 
+            <name>VK_VERSION_MAJOR</name>
+            (version) ((uint32_t)(version) &gt;&gt; 22U)
+        </type>
+
+    </types>
+</registry>
