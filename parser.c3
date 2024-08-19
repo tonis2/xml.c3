@@ -30,7 +30,7 @@ struct Parser {
 	InStream stream;
 	XMLToken token;
 	Document* doc;
-	usz active_node;
+	Node* active_node;
 	usz line;
 }
 
@@ -83,7 +83,7 @@ fn XMLToken! Parser.advance(&self)
 	}
 
 	switch (true)
-	{	
+	{
 		case c == '<' && self.peek(fn (character) => character == '!')! : {
 			self.token = XMLToken.HEADER;
 			self.stream.seek(1, Seek.CURSOR)!;
@@ -94,7 +94,7 @@ fn XMLToken! Parser.advance(&self)
 		case c == '<': {
 			// If next is /, its close tag
 			if (self.peek(fn (character) => character == '/')!) nextcase;
-			//If next is !, its header tag
+			// If next is !, its header tag
 			// if (self.peek(fn (character) => character == '!')!) nextcase;
 
 			self.token = XMLToken.START_TAG;
@@ -118,18 +118,17 @@ fn XMLToken! Parser.advance(&self)
 			self.token = XMLToken.END_TAG;
 			break;
 		}
-		case std::ascii::is_print(c) && self.token == END_TAG: {
+		case std::ascii::is_print(c) && (self.token == END_TAG || self.token == CLOSE_TAG): {
 			// Read node value
 			self.token = XMLToken.VALUE_START;
 			self.buffer.append_char(c);
 
-			usz value_size = self.seek(fn (character) => character == '<', .return_pos = true)!;
-		
-			for (uint i = 0; i < value_size; i++) {
+			while (self.peek(fn (character) => character != '<')!) {
 				self.buffer.append_char(self.stream.read_byte()!);
-			};
+			}
+			// io::printfn("value buffer %s", self.buffer);
 		}
-		case std::ascii::is_print(c):
+		case std::ascii::is_print(c): {
 			// Parse node attribute
 			self.token = XMLToken.ATTRIBUTE_START;
 			usz! attribute_size = self.seek(fn (character) => character == '"', .skip = 1);
@@ -146,6 +145,7 @@ fn XMLToken! Parser.advance(&self)
 			for (uint i; i < attribute_size + 3; i++) {
 				self.buffer.append_char(self.stream.read_byte()!);
 			};
+		}
 		default:
 			io::printfn("not found char %c", c);
 			return XMLParserError.UNEXPECTED_CHARACTER?;
@@ -213,25 +213,13 @@ fn void Parser.close_last_node(&self)
 	}
 }
 
-fn Node* Parser.current_node(&self)
-{
-	return &self.doc.children[self.active_node];
-}
-
-fn Node* Parser.prev_node(&self)
-{
-	if (self.active_node - 1 < 0) return null;
-	return &self.doc.children[self.active_node - 1];
-}
-
 fn Document! parse_string(String s, Allocator allocator = allocator::heap()) => parse(ByteReader{}.init(s), allocator);
-
 fn Document! load_file (String path, Allocator allocator = allocator::heap()) {
     File! file = file::open(path, "r");
     defer file.close()!!;
 
     if (catch err = file) {
-        io::printfn("Failed to find the gltf file");
+        io::printfn("Failed to find the xml file");
         return XMLParserError.FILE_NOT_FOUND?;
     }
 
@@ -242,43 +230,51 @@ fn Document! load_file (String path, Allocator allocator = allocator::heap()) {
 fn Document! parse(InStream s, Allocator allocator = allocator::heap())
 {
 	Document document;
-	Parser parser = { .buffer = dstring::new_with_capacity(64, allocator), .stream = s, .allocator = allocator, .doc = &document };
+	Parser parser = { .buffer = DString{}.new_init(64, allocator), .stream = s, .allocator = allocator, .doc = &document };
 	defer parser.free();
-
-	@pool(allocator)
-	{
-		while (try parser.advance()) {
+	
+	while (try parser.advance()) {
 			//io::printfn("token %s", parser.token);
 			switch (parser.token) {
 				case START_TAG: {
-					Node* parent_node = parser.get_parent();				
-					document.children.push(Node {
-						.closed = false
-					});
+					Node* parent_node = parser.get_parent();
+					Node new_node = Node {
+						.closed = false,
+					};
+					// new_node.children.new_init(.allocator = allocator);
+					document.children.push(new_node);
 
 					// Set created node as active
-					parser.active_node = document.children.len() - 1;
+					parser.active_node = document.children.get_ref(document.children.len() - 1);
 
 					// Set node name
-					parser.current_node().name = parser.buffer.copy_str();
+					parser.active_node.name = parser.buffer.copy_str();
 					parser.buffer.clear();
 
 					// Push node to as correct parents child
-					if (parent_node != null) parent_node.children.push(parser.current_node());
+					if (parent_node != null) {
+						parent_node.children.push(parser.active_node);
+					}
 				}
 				case END_TAG: {}
 				case CLOSE_TAG: {
+					// io::printfn("end tag %s %s", parser.active_node.name, parser.active_node.value);
 					parser.close_last_node();
 				}
 				case VALUE_START: {
 					// Copy buffer to node value
-					parser.current_node().value = parser.buffer.copy_str();
+					Node* parent_node = parser.get_parent();
+					if (parent_node != null) {
+						parent_node.value = parser.buffer.copy_str();
+					} else {
+						// io::printfn("parentless buffer %s", parser.buffer);
+					}
 					parser.buffer.clear();
 				}
 				case ATTRIBUTE_START: {
 					// Add new attribute
 					String[] attribute = parser.buffer.str_view().split("=");
-					parser.current_node().attributes.set(attribute[0].copy(), attribute[1].copy().trim("\""));
+					parser.active_node.attributes.set(attribute[0].copy(), attribute[1].copy().trim("\""));
 					parser.buffer.clear();
 					free(attribute);
 				}
@@ -290,8 +286,7 @@ fn Document! parse(InStream s, Allocator allocator = allocator::heap())
 					break;
 				}
 			}
-		}
-	};
+	}
 	document.root = &document.children[0];
 	return document;
 }
@@ -304,7 +299,6 @@ fn void Parser.free(&self)
 
 fn void Node.free(&self)
 {
-	foreach (child: self.children) child.free();
 	self.attributes.free();
 	self.children.free();
 	self.name.free();
