@@ -36,4 +36,6 @@ fn void! xml_file_parsing2() {
 
     xml::Document vk = xml::load_file("assets/vk_test.xml")!;
     defer vk.free();
+    io::printfn("children %d", vk.children.len());
+
 }   

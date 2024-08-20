@@ -26,8 +26,8 @@ struct Node {
 
 struct Parser {
 	Allocator allocator;
-	DString buffer;
 	InStream stream;
+	DString buffer;
 	XMLToken token;
 	Document* doc;
 	Node* active_node;
@@ -239,11 +239,10 @@ fn Document! parse(InStream s, Allocator allocator = allocator::heap())
 			switch (parser.token) {
 				case START_TAG: {
 					Node* parent_node = parser.get_parent();
-					Node new_node = Node {
+					
+					document.children.push(Node {
 						.closed = false,
-					};
-					// new_node.children.new_init(.allocator = allocator);
-					document.children.push(new_node);
+					});
 
 					// Set created node as active
 					parser.active_node = document.children.get_ref(document.children.len() - 1);
@@ -254,7 +253,7 @@ fn Document! parse(InStream s, Allocator allocator = allocator::heap())
 
 					// Push node to as correct parents child
 					if (parent_node != null) {
-						parent_node.children.push(parser.active_node);
+						parent_node.children.push(document.children.get_ref(document.children.len() - 1));
 					}
 				}
 				case END_TAG: {}
