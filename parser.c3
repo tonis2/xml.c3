@@ -274,7 +274,8 @@ fn Document! parse(InStream s, Allocator allocator = allocator::heap())
 				case ATTRIBUTE_START: {
 					// Add new attribute
 					String[] attribute = parser.buffer.str_view().split("=");
-					parser.active_node.attributes.set(attribute[0].copy(), attribute[1].copy().trim("\""));
+					// Todo: check memory leaks here
+					parser.active_node.attributes.set(attribute[0].copy(), attribute[1].trim("\"").copy());
 					parser.buffer.clear();
 					free(attribute);
 				}
