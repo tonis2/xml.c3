@@ -1,5 +1,4 @@
 <registry>
-    <types comment="Vulkan type definitions">
        <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
        <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
        <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
@@ -1136,5 +1135,12 @@
         <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
         <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
         <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
-    </types>
+        <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
+        <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
+        <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
+        <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
+        <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
+        <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
+        <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
+        <tag name="MSFT"        author="Microsoft Corporation"         contact="Jesse Natalie @jenatali"/>
 </registry>
