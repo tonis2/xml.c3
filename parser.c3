@@ -128,23 +128,37 @@ fn XMLToken! Parser.advance(&self)
 			}
 			break;
 		}
-		case std::ascii::is_print(c): {
+		case std::ascii::is_print(c) && self.token == START_TAG: {
+			self.stream.seek(-1, Seek.CURSOR)!;
+			
 			// Parse node attribute
 			self.token = XMLToken.ATTRIBUTE_START;
-			usz! attribute_size = self.seek(fn (character) => character == '"', .skip = 1);
 
-			if (catch err = attribute_size) {
-				io::printfn("failed to parse attribute %s", err);
-				return XMLParserError.UNEXPECTED_CHARACTER?;
+			while (self.peek(fn (character) => character != '>')!) {
+				DString name;
+				DString value;
+
+				// Read attribute name
+				while (self.peek(fn (character) => character != '=')!) {
+					char key = self.stream.read_byte()!;
+					if (key != ' ') name.append_char(key);
+				}
+
+				// Skip "" on value
+				self.stream.seek(2, Seek.CURSOR)!;
+
+				while (self.peek(fn (character) => character != '"')!) {
+					value.append_char(self.stream.read_byte()!);
+				}
+
+				self.stream.seek(1, Seek.CURSOR)!;
+				self.active_node.attributes.set(name.copy_str(), value.copy_str());
+
+				name.free();
+				value.free();
+
+				if (self.peek(fn (character) => character == '/')!) break;
 			}
-
-			// Set stream back to start pos
-			self.stream.seek(-(attribute_size + 3), Seek.CURSOR)!;
-
-			// Add whole attribute to buffer
-			for (uint i; i < attribute_size + 3; i++) {
-				self.buffer.append_char(self.stream.read_byte()!);
-			};
 			break;
 		}
 		default:
@@ -271,14 +285,7 @@ fn Document! parse(InStream s, Allocator allocator = allocator::heap())
 					}
 					parser.buffer.clear();
 				}
-				case ATTRIBUTE_START: {
-					// Add new attribute
-					String[] attribute = parser.buffer.str_view().split("=");
-					// Todo: check memory leaks here
-					parser.active_node.attributes.set(attribute[0].copy(), attribute[1].trim("\"").copy());
-					parser.buffer.clear();
-					free(attribute);
-				}
+				case ATTRIBUTE_START: {}
 				case HEADER: {
 					parser.doc.header = parser.buffer.copy_str();
 					parser.buffer.clear();
