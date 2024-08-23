@@ -33,6 +33,10 @@ fn void! xml_file_parsing1() {
 }  
 
 fn void! xml_file_parsing2() {
-  // xml::Document vk = xml::load_file("assets/vk_test.xml")!;
-  // defer vk.free();
+  xml::Document vk = xml::load_file("assets/vk.xml")!;
+
+  foreach (value: vk.children) {
+    io::printfn("attrs %d", value.attributes.len());
+  }
+  defer vk.free();
 }   

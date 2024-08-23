@@ -135,8 +135,8 @@ fn XMLToken! Parser.advance(&self)
 			self.token = XMLToken.ATTRIBUTE_START;
 
 			while (self.peek(fn (character) => character != '>')!) {
-				DString name;
-				DString value;
+				DString name = dstring::temp_with_capacity(32);
+				DString value = dstring::temp_with_capacity(32);
 
 				// Read attribute name
 				while (self.peek(fn (character) => character != '=')!) {
@@ -245,56 +245,59 @@ fn Document! load_file (String path, Allocator allocator = allocator::heap()) {
 fn Document! parse(InStream s, Allocator allocator = allocator::heap())
 {
 	Document document;
-	Parser parser = { .buffer = DString{}.new_init(64, allocator), .stream = s, .allocator = allocator, .doc = &document };
-	defer parser.free();
+
 	
-	while (try parser.advance()) {
-			//io::printfn("token %s", parser.token);
-			switch (parser.token) {
-				case START_TAG: {
-					Node* parent_node = parser.get_parent();
-					
-					document.children.push(Node {
-						.closed = false,
-					});
+	@pool() {
+		Parser parser = { .buffer = dstring::temp_with_capacity(64), .stream = s, .allocator = allocator, .doc = &document };
+		// defer parser.free();
 
-					// Set created node as active
-					parser.active_node = document.children.get_ref(document.children.len() - 1);
+		while (try parser.advance()) {
+				switch (parser.token) {
+					case START_TAG: {
+						Node* parent_node = parser.get_parent();
+						
+						document.children.push(Node {
+							.closed = false,
+						});
 
-					// Set node name
-					parser.active_node.name = parser.buffer.copy_str();
-					parser.buffer.clear();
+						// Set created node as active
+						parser.active_node = document.children.get_ref(document.children.len() - 1);
 
-					// Push node to as correct parents child
-					if (parent_node != null) {
-						parent_node.children.push(document.children.get_ref(document.children.len() - 1));
+						// Set node name
+						parser.active_node.name = parser.buffer.copy_str();
+						parser.buffer.clear();
+
+						// Push node to as correct parents child
+						if (parent_node != null) {
+							parent_node.children.push(document.children.get_ref(document.children.len() - 1));
+						}
+					}
+					case END_TAG: {}
+					case CLOSE_TAG: {
+						// io::printfn("end tag %s %s", parser.active_node.name, parser.active_node.value);
+						parser.close_last_node();
+					}
+					case VALUE_START: {
+						// Copy buffer to node value
+						Node* parent_node = parser.get_parent();
+						if (parent_node != null) {
+							parent_node.value = parser.buffer.copy_str();
+						} else {
+							io::printfn("parentless buffer %s", parser.buffer);
+						}
+						parser.buffer.clear();
+					}
+					case ATTRIBUTE_START: {}
+					case HEADER: {
+						parser.doc.header = parser.buffer.copy_str();
+						parser.buffer.clear();
+					}
+					default: {
+						break;
 					}
 				}
-				case END_TAG: {}
-				case CLOSE_TAG: {
-					// io::printfn("end tag %s %s", parser.active_node.name, parser.active_node.value);
-					parser.close_last_node();
-				}
-				case VALUE_START: {
-					// Copy buffer to node value
-					Node* parent_node = parser.get_parent();
-					if (parent_node != null) {
-						parent_node.value = parser.buffer.copy_str();
-					} else {
-						io::printfn("parentless buffer %s", parser.buffer);
-					}
-					parser.buffer.clear();
-				}
-				case ATTRIBUTE_START: {}
-				case HEADER: {
-					parser.doc.header = parser.buffer.copy_str();
-					parser.buffer.clear();
-				}
-				default: {
-					break;
-				}
-			}
-	}
+		}
+	};
 	document.root = &document.children[0];
 	return document;
 }
