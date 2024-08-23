@@ -11,7 +11,6 @@ fn void! xml_file_parsing1() {
     xml::Document test = xml::load_file("assets/test.xml")!;
     defer test.free();
 
-
     assert(test.root.children[0].name == "comment");
     assert(test.root.children[1].name == "comment");
     assert(test.root.attributes.get("name")! == "Decode");
@@ -33,10 +32,14 @@ fn void! xml_file_parsing1() {
 }  
 
 fn void! xml_file_parsing2() {
-  xml::Document vk = xml::load_file("assets/vk.xml")!;
+  xml::Document vk = vk = xml::load_file("assets/vk_test.xml")!;
 
-  foreach (value: vk.children) {
-    io::printfn("attrs %d", value.attributes.len());
-  }
+  assert(vk.children.len() == 1190);
+
+  // NodeList platforms;
+  // defer platforms.free();
+
+  // vk.root.find(fn (node) => node.name == "platforms", &platforms);
+
   defer vk.free();
 }   

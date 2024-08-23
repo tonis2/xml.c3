@@ -210,7 +210,7 @@ fn Node* Parser.get_node(&self, usz index)
 fn Node* Parser.get_parent(&self, usz offset = 0)
 {
 	// Check for nodes that are not closed
-	for (usz i = self.doc.children.len(); i > 0; i--) {
+	for (usz i = self.doc.children.len() - offset; i > 0; i--) {
 		Node* node = &self.doc.children[i - 1];
 		if (node.closed == false) return node;
 	}
@@ -228,8 +228,8 @@ fn void Parser.close_last_node(&self)
 	}
 }
 
-fn Document! parse_string(String s, Allocator allocator = allocator::heap()) => parse(ByteReader{}.init(s), allocator);
-fn Document! load_file (String path, Allocator allocator = allocator::heap()) {
+fn Document! parse_string(String s, Allocator allocator = allocator::temp()) => parse(ByteReader{}.init(s), allocator);
+fn Document! load_file (String path, Allocator allocator = allocator::temp()) {
     File! file = file::open(path, "r");
     defer file.close()!!;
 
@@ -246,56 +246,50 @@ fn Document! parse(InStream s, Allocator allocator = allocator::heap())
 {
 	Document document;
 
-	
 	@pool() {
-		Parser parser = { .buffer = dstring::temp_with_capacity(64), .stream = s, .allocator = allocator, .doc = &document };
-		// defer parser.free();
-
+		Parser parser = { .buffer = dstring::temp_with_capacity(32), .stream = s, .allocator = allocator, .doc = &document };
+		defer parser.free();
 		while (try parser.advance()) {
-				switch (parser.token) {
-					case START_TAG: {
-						Node* parent_node = parser.get_parent();
-						
-						document.children.push(Node {
-							.closed = false,
-						});
+			switch (parser.token) {
+				case START_TAG: {
+					Node active_node = Node {
+						.closed = false,
+						.name = parser.buffer.copy_str()
+					};
+					parser.buffer.clear();
 
-						// Set created node as active
-						parser.active_node = document.children.get_ref(document.children.len() - 1);
-
-						// Set node name
-						parser.active_node.name = parser.buffer.copy_str();
-						parser.buffer.clear();
-
-						// Push node to as correct parents child
-						if (parent_node != null) {
-							parent_node.children.push(document.children.get_ref(document.children.len() - 1));
-						}
-					}
-					case END_TAG: {}
-					case CLOSE_TAG: {
-						// io::printfn("end tag %s %s", parser.active_node.name, parser.active_node.value);
-						parser.close_last_node();
-					}
-					case VALUE_START: {
-						// Copy buffer to node value
-						Node* parent_node = parser.get_parent();
-						if (parent_node != null) {
-							parent_node.value = parser.buffer.copy_str();
-						} else {
-							io::printfn("parentless buffer %s", parser.buffer);
-						}
-						parser.buffer.clear();
-					}
-					case ATTRIBUTE_START: {}
-					case HEADER: {
-						parser.doc.header = parser.buffer.copy_str();
-						parser.buffer.clear();
-					}
-					default: {
-						break;
+					document.children.push(active_node);
+					// Set created node as active
+					parser.active_node = document.children.get_ref(document.children.len() - 1);
+					// Push node to as correct parents child
+					Node* parent_node = parser.get_parent(.offset = 1);
+		
+					if (parent_node != null) {
+						parent_node.children.push(parser.active_node);
 					}
 				}
+				case END_TAG: {}
+				case CLOSE_TAG: {
+					// io::printfn("end tag %s %s", parser.active_node.name, parser.active_node.value);
+					parser.close_last_node();
+				}
+				case VALUE_START: {
+					// Copy buffer to node value
+					Node* parent_node = parser.get_parent();
+					if (parent_node != null) {
+						parent_node.value = parser.buffer.copy_str();
+					}
+					parser.buffer.clear();
+				}
+				case ATTRIBUTE_START: {}
+				case HEADER: {
+					parser.doc.header = parser.buffer.copy_str();
+					parser.buffer.clear();
+				}
+				default: {
+					break;
+				}
+			}
 		}
 	};
 	document.root = &document.children[0];
