@@ -82,11 +82,13 @@ fn void! Parser.advance(&self)
 	{
 		case c == '<' && self.peek(fn (character) => character != '/')!: {
 			// Start node
-			self.seek(fn (character) => character == '>' || character == ' ')!;
+			usz name_size = self.seek(fn (character) => character == '>' || character == ' ')!;
 			self.token = START_TAG;
+			break;
 		}
 		case c == '/' || c == '>': {
 			self.token = END_TAG;
+			self.seek(fn (character) => character == '>')!;
 			break;
 		}
 		case c == '<' && self.peek(fn (character) => character == '/')!: {
@@ -96,13 +98,20 @@ fn void! Parser.advance(&self)
 		}
 		case std::ascii::is_print(c) && self.token == START_TAG || self.token == ATTRIBUTE: {
 			self.token = ATTRIBUTE;
-			usz attribute_size = self.seek(fn (character) => character == '"', .skip = 1, .return_pos = true)!;
+			usz size = self.seek(fn (character) => character == '"', .skip = 1, .return_pos = true)!;
+			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
 
-			char[] buffer = mem::new_array(char, attribute_size);
-			
-			self.stream.read(buffer)!;
-			io::printfn("%s", buffer);
-			free(buffer);
+			break;
+		}
+		case std::ascii::is_print(c) && self.token == END_TAG: {
+			self.token = VALUE;
+			self.stream.seek(1, Seek.CURSOR)!;
+
+			usz size = self.seek(fn (character) => character == '<', .return_pos = true)!;
+			for (uint i; i < size - 1; i++) self.buffer.append(self.stream.read_byte()!);
+
+			self.seek(fn (character) => character == '>')!;
+			self.stream.seek(-1, Seek.CURSOR)!;
 			break;
 		}
 		default:
@@ -162,7 +171,7 @@ fn Document! parse(InStream s, Allocator allocator = allocator::temp())
 {
 	Document document;
 
-	Parser parser = { .buffer = dstring::temp_with_capacity(32), .stream = s, .allocator = allocator, .doc = &document };
+	Parser parser = { .buffer = dstring::temp_with_capacity(64), .stream = s, .allocator = allocator, .doc = &document };
 	defer parser.free();
 
 	while (try parser.advance()) {
@@ -170,8 +179,14 @@ fn Document! parse(InStream s, Allocator allocator = allocator::temp())
 				case START_TAG: {}
 				case END_TAG: {}
 				case CLOSE_TAG: {}
-				case VALUE: {}
-				case ATTRIBUTE: {}
+				case VALUE: {
+					io::printfn("value %s", parser.buffer);
+					parser.buffer.clear();
+				}
+				case ATTRIBUTE: {
+					io::printfn("attr %s", parser.buffer);
+					parser.buffer.clear();
+				}
 				case HEADER: {}
 				default: {
 					break;
