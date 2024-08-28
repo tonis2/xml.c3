@@ -80,17 +80,25 @@ fn void! Parser.advance(&self)
 
 	switch (true)
 	{
+		case c == '<' && self.peek(fn (character) => character == '!')!: {
+			self.token = HEADER;
+			self.stream.seek(2, Seek.CURSOR)!;
+			
+			usz size = self.seek(fn (character) => character == '>', .return_pos = true)!;
+			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
+			break;
+		}
 		case c == '<' && self.peek(fn (character) => character != '/')!: {
 			self.token = START_TAG;
+			self.stream.seek(1, Seek.CURSOR)!;
 			// Start node
-			self.stream.seek(2, Seek.CURSOR)!;
 			usz size = self.seek(fn (character) => character == '>' || character == ' ', .return_pos = true)!;
-			for (uint i; i < size - 1; i++) self.buffer.append(self.stream.read_byte()!);
+			for (uint i = 0; i < size; i++) self.buffer.append(self.stream.read_byte()!);
+			
 			break;
 		}
 		case c == '/' || c == '>': {
 			self.token = END_TAG;
-			self.stream.seek(1, Seek.CURSOR)!;
 			break;
 		}
 		case c == '<' && self.peek(fn (character) => character == '/')!: {
@@ -101,14 +109,13 @@ fn void! Parser.advance(&self)
 		case std::ascii::is_print(c) && (self.token == START_TAG || self.token == ATTRIBUTE): {
 			self.token = ATTRIBUTE;
 			usz size = self.seek(fn (character) => character == '"', .skip = 1, .return_pos = true)!;
-			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
+			for (uint i; i < size + 1; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
 		case std::ascii::is_print(c): {
 			self.token = VALUE;
-			self.stream.seek(1, Seek.CURSOR)!;
 			usz size = self.seek(fn (character) => character == '<', .return_pos = true)!;
-			for (uint i; i < size - 1; i++) self.buffer.append(self.stream.read_byte()!);
+			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
 		default:
@@ -119,14 +126,14 @@ fn void! Parser.advance(&self)
 
 
 
-fn usz! Parser.seek(&self, ParserSearch search, uint skip = 0, bool debug = false, bool return_pos = false)
+fn usz! Parser.seek(&self, ParserSearch search, uint skip = 0, bool return_pos = false)
 {
 	usz offset;
 	uint skipped = 0;
 	char c;
 	// Find the char
 	while (c = self.stream.read_byte()!) {
-		if (debug) io::printf("%c", c);
+		offset++;
 		if (search(c)) {
 			if (skipped == skip) {break;}
 			else {
@@ -134,11 +141,10 @@ fn usz! Parser.seek(&self, ParserSearch search, uint skip = 0, bool debug = fals
 				continue;
 			};
 		};
-		offset++;
 	};
 
-	if (return_pos) self.stream.seek(-(offset + 3), Seek.CURSOR)!;
-	return offset + 3;
+	if (return_pos) self.stream.seek(-(offset + 1), Seek.CURSOR)!;
+	return offset;
 }
 
 fn bool! Parser.peek(&self, ParserSearch search)
@@ -187,7 +193,10 @@ fn Document! parse(InStream s, Allocator allocator = allocator::temp())
 					io::printfn("attr %s", parser.buffer);
 					parser.buffer.clear();
 				}
-				case HEADER: {}
+				case HEADER: {
+					io::printfn("header %s", parser.buffer);
+					parser.buffer.clear();
+				}
 				default: {
 					break;
 				}
