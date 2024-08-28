@@ -81,8 +81,13 @@ fn void! Parser.advance(&self)
 	switch (true)
 	{
 		case c == '<' && self.peek(fn (character) => character != '/')!: {
+			self.stream.seek(2, Seek.CURSOR)!;
+			
 			// Start node
-			usz name_size = self.seek(fn (character) => character == '>' || character == ' ')!;
+			usz size = self.seek(fn (character) => character == '>' || character == ' ', .return_pos = true)!;
+		
+			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
+
 			self.token = START_TAG;
 			break;
 		}
@@ -176,7 +181,10 @@ fn Document! parse(InStream s, Allocator allocator = allocator::temp())
 
 	while (try parser.advance()) {
 			switch (parser.token) {
-				case START_TAG: {}
+				case START_TAG: {
+					io::printfn("name %s", parser.buffer);
+					parser.buffer.clear();
+				}
 				case END_TAG: {}
 				case CLOSE_TAG: {}
 				case VALUE: {
