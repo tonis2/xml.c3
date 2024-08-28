@@ -8,6 +8,6 @@ import xml;
     
 fn void! xml_file_parsing1() {
 
-    xml::Document test = xml::load_file("assets/test.xml")!;
+    xml::Document test = xml::load_file("assets/vk.xml")!;
     defer test.free();
 }  

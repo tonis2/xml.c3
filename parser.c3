@@ -81,19 +81,16 @@ fn void! Parser.advance(&self)
 	switch (true)
 	{
 		case c == '<' && self.peek(fn (character) => character != '/')!: {
-			self.stream.seek(2, Seek.CURSOR)!;
-			
-			// Start node
-			usz size = self.seek(fn (character) => character == '>' || character == ' ', .return_pos = true)!;
-		
-			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
-
 			self.token = START_TAG;
+			// Start node
+			self.stream.seek(2, Seek.CURSOR)!;
+			usz size = self.seek(fn (character) => character == '>' || character == ' ', .return_pos = true)!;
+			for (uint i; i < size - 1; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
 		case c == '/' || c == '>': {
 			self.token = END_TAG;
-			self.seek(fn (character) => character == '>')!;
+			self.stream.seek(1, Seek.CURSOR)!;
 			break;
 		}
 		case c == '<' && self.peek(fn (character) => character == '/')!: {
@@ -101,22 +98,17 @@ fn void! Parser.advance(&self)
 			self.seek(fn (character) => character == '>')!;
 			break;
 		}
-		case std::ascii::is_print(c) && self.token == START_TAG || self.token == ATTRIBUTE: {
+		case std::ascii::is_print(c) && (self.token == START_TAG || self.token == ATTRIBUTE): {
 			self.token = ATTRIBUTE;
 			usz size = self.seek(fn (character) => character == '"', .skip = 1, .return_pos = true)!;
 			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
-
 			break;
 		}
-		case std::ascii::is_print(c) && self.token == END_TAG: {
+		case std::ascii::is_print(c): {
 			self.token = VALUE;
 			self.stream.seek(1, Seek.CURSOR)!;
-
 			usz size = self.seek(fn (character) => character == '<', .return_pos = true)!;
 			for (uint i; i < size - 1; i++) self.buffer.append(self.stream.read_byte()!);
-
-			self.seek(fn (character) => character == '>')!;
-			self.stream.seek(-1, Seek.CURSOR)!;
 			break;
 		}
 		default:
