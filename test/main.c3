@@ -42,13 +42,10 @@ fn void! xml_file_parsing2() {
 
     assert(members.len() == 9);
     assert(types.len() == 3);
-
-    // foreach (value: types) {
-    //     io::printfn("%s", value.attributes.get("name")!, );
-    // }
     
-    // assert(types[0].attributes.get("name")! == "VkRenderingAttachmentInfoKHR");
-    // assert(types[1].attributes.get("name")! == "VkRenderingFragmentShadingRateAttachmentInfoKHR");
+    assert(types[0].attributes.get("name")! == "VkRenderingAttachmentInfoKHR");
+    assert(types[1].attributes.get("name")! == "VkRenderingFragmentShadingRateAttachmentInfoKHR");
+    assert(types[2].attributes.get("name")! == "VkRenderingFragmentDensityMapAttachmentInfoEXT");
 }
 
 // fn void! xml_file_parsing3() {

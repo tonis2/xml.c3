@@ -50,7 +50,7 @@ def ParserSearch = fn bool (char value);
 
 fn void Node.find(&self, NodeSearch search_fn, NodeList* cache) {
 	if (search_fn(self)) cache.push(self);
-	foreach (child: self.children) child.find(search_fn, cache);
+	foreach (&child: self.children) child.find(search_fn, cache);
 }
 
 fn void! Parser.advance(&self)
