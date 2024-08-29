@@ -1,4 +1,55 @@
 <registry>
-    <platforms comment="Vulkan platform names, reserved for use with platform- and window system-specific extensions" value="test">
+    <comment>
+Copyright 2015-2024 The Khronos Group Inc.
+
+SPDX-License-Identifier: Apache-2.0 OR MIT
+    </comment>
+
+    <comment>
+This file, vk.xml, is the Vulkan API Registry. It is a critically important
+and normative part of the Vulkan Specification, including a canonical
+machine-readable definition of the API, parameter and member validation
+language incorporated into the Specification and reference pages, and other
+material which is registered by Khronos, such as tags used by extension and
+layer authors. The authoritative public version of vk.xml is maintained in
+the default branch (currently named main) of the Khronos Vulkan GitHub
+project. The authoritative private version is maintained in the default
+branch of the member gitlab server.
+    </comment>
+
+    <platforms comment="Vulkan platform names, reserved for use with platform- and window system-specific extensions">
+        <platform name="xlib" protect="VK_USE_PLATFORM_XLIB_KHR" comment="X Window System, Xlib client library"/>
+        <platform name="xlib_xrandr" protect="VK_USE_PLATFORM_XLIB_XRANDR_EXT" comment="X Window System, Xlib client library, XRandR extension"/>
+        <platform name="xcb" protect="VK_USE_PLATFORM_XCB_KHR" comment="X Window System, Xcb client library"/>
+        <platform name="wayland" protect="VK_USE_PLATFORM_WAYLAND_KHR" comment="Wayland display server protocol"/>
+        <platform name="directfb" protect="VK_USE_PLATFORM_DIRECTFB_EXT" comment="DirectFB library"/>
+        <platform name="android" protect="VK_USE_PLATFORM_ANDROID_KHR" comment="Android OS"/>
+        <platform name="win32" protect="VK_USE_PLATFORM_WIN32_KHR" comment="Microsoft Win32 API (also refers to Win64 apps)"/>
+        <platform name="vi" protect="VK_USE_PLATFORM_VI_NN" comment="Nintendo Vi"/>
+        <platform name="ios" protect="VK_USE_PLATFORM_IOS_MVK" comment="Apple IOS"/>
+        <platform name="macos" protect="VK_USE_PLATFORM_MACOS_MVK" comment="Apple MacOS"/>
+        <platform name="metal" protect="VK_USE_PLATFORM_METAL_EXT" comment="Metal on CoreAnimation on Apple platforms"/>
+        <platform name="fuchsia" protect="VK_USE_PLATFORM_FUCHSIA" comment="Fuchsia"/>
+        <platform name="ggp" protect="VK_USE_PLATFORM_GGP" comment="Google Games Platform"/>
+        <platform name="sci" protect="VK_USE_PLATFORM_SCI" comment="NVIDIA SCI"/>
+        <platform name="provisional" protect="VK_ENABLE_BETA_EXTENSIONS" comment="Enable declarations for beta/provisional extensions"/>
+        <platform name="screen" protect="VK_USE_PLATFORM_SCREEN_QNX" comment="QNX Screen Graphics Subsystem"/>
     </platforms>
+
+    <types comment="Vulkan type definitions">
+        <type category="struct" name="VkRenderingAttachmentInfoKHR" alias="VkRenderingAttachmentInfo"/>
+        <type category="struct" name="VkRenderingFragmentShadingRateAttachmentInfoKHR" structextends="VkRenderingInfo">
+            <member values="VK_STRUCTURE_TYPE_RENDERING_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
+            <member optional="true">const <type>void</type>*                                               <name>pNext</name></member>
+            <member optional="true"><type>VkImageView</type>                                                <name>imageView</name></member>
+            <member><type>VkImageLayout</type>                                                              <name>imageLayout</name></member>
+            <member><type>VkExtent2D</type>                                                                 <name>shadingRateAttachmentTexelSize</name></member>
+        </type>
+        <type category="struct" name="VkRenderingFragmentDensityMapAttachmentInfoEXT" structextends="VkRenderingInfo">
+            <member values="VK_STRUCTURE_TYPE_RENDERING_FRAGMENT_DENSITY_MAP_ATTACHMENT_INFO_EXT"><type>VkStructureType</type> <name>sType</name></member>
+            <member optional="true">const <type>void</type>*                                                <name>pNext</name></member>
+            <member><type>VkImageView</type>                                                                <name>imageView</name></member>
+            <member><type>VkImageLayout</type>                                                              <name>imageLayout</name></member>
+        </type>
+    </types>
 </registry>

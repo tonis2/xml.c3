@@ -197,28 +197,23 @@ fn Node! parse(InStream s, Allocator allocator = allocator::temp())
 				
 					parser.open_nodes.push(parser.active_node);
 					parser.buffer.clear();
-
-					io::printfn("new node %s", parser.active_node.name);
 				}
 				case END_TAG: {
-					io::printfn("end tag %s", parser.active_node.name);
+					// io::printfn("end tag %s", parser.active_node.name);
 				}
 				case CLOSE_TAG: {
-					io::printfn("closing %s", parser.open_nodes[parser.open_nodes.len() - 1].name);
 					parser.open_nodes.pop()!;
 				}
 				case VALUE: {
-					io::printfn("value %s", parser.buffer);
 					parser.active_node.value = parser.buffer.copy_str();
 					parser.buffer.clear();
 				}
 				case ATTRIBUTE: {
-					io::printfn("attr %s", parser.buffer);
+					//io::printfn("attr %s", parser.buffer);
 					parser.active_node.header = parser.buffer.copy_str();
 					parser.buffer.clear();
 				}
 				case HEADER: {
-					io::printfn("header %s", parser.buffer);
 					parser.active_node.header = parser.buffer.copy_str();
 					parser.buffer.clear();
 				}
@@ -245,5 +240,6 @@ fn void Node.free(&self)
 	self.children.free();
 	self.name.free();
 	self.value.free();
+	self.header.free();
 }
 
