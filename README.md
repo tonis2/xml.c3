@@ -3,3 +3,4 @@ XML parser in C3
 
 
 
+Check test for examples
