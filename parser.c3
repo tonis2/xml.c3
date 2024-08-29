@@ -209,8 +209,10 @@ fn Node! parse(InStream s, Allocator allocator = allocator::temp())
 					parser.buffer.clear();
 				}
 				case ATTRIBUTE: {
-					//io::printfn("attr %s", parser.buffer);
-					parser.active_node.header = parser.buffer.copy_str();
+					String data = parser.buffer.str_view();
+					usz split_index = data.index_of_char('=')!;
+					// Add attribute to hashmap
+					parser.active_node.attributes.set(data[0..split_index - 1].copy(), data[split_index + 2..parser.buffer.len() - 2].copy());
 					parser.buffer.clear();
 				}
 				case HEADER: {
