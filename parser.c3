@@ -10,16 +10,11 @@ import std::ascii;
 def Attribute = HashMap(<String, String>);
 def NodeList = List(<Node*>);
 
-struct Document {
-	Node root;
-	String header;
-}
-
 struct Node {
 	String name;
 	String value;
+	String header;
 	Attribute attributes;
-	bool closed;
 	List(<Node>) children;
 }
 
@@ -28,8 +23,8 @@ struct Parser {
 	InStream stream;
 	DString buffer;
 	XMLToken token;
-	Document* doc;
 	Node* active_node;
+	List(<Node*>) open_nodes;
 	usz line;
 }
 
@@ -83,7 +78,7 @@ fn void! Parser.advance(&self)
 		case c == '<' && self.peek(fn (character) => character == '!')!: {
 			self.token = HEADER;
 			self.stream.seek(2, Seek.CURSOR)!;
-			
+			// Parses header value
 			usz size = self.seek(fn (character) => character == '>', .return_pos = true)!;
 			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
@@ -91,7 +86,7 @@ fn void! Parser.advance(&self)
 		case c == '<' && self.peek(fn (character) => character != '/')!: {
 			self.token = START_TAG;
 			self.stream.seek(1, Seek.CURSOR)!;
-			// Start node
+			// Parser tag name
 			usz size = self.seek(fn (character) => character == '>' || character == ' ', .return_pos = true)!;
 			for (uint i = 0; i < size; i++) self.buffer.append(self.stream.read_byte()!);
 			
@@ -99,6 +94,7 @@ fn void! Parser.advance(&self)
 		}
 		case c == '/' || c == '>': {
 			self.token = END_TAG;
+			self.stream.seek(1, Seek.CURSOR)!;
 			break;
 		}
 		case c == '<' && self.peek(fn (character) => character == '/')!: {
@@ -108,12 +104,14 @@ fn void! Parser.advance(&self)
 		}
 		case std::ascii::is_print(c) && (self.token == START_TAG || self.token == ATTRIBUTE): {
 			self.token = ATTRIBUTE;
+			//Parser attribute value
 			usz size = self.seek(fn (character) => character == '"', .skip = 1, .return_pos = true)!;
 			for (uint i; i < size + 1; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
 		case std::ascii::is_print(c): {
 			self.token = VALUE;
+			// Parses value
 			usz size = self.seek(fn (character) => character == '<', .return_pos = true)!;
 			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
@@ -156,8 +154,8 @@ fn bool! Parser.peek(&self, ParserSearch search)
 }
 
 
-fn Document! parse_string(String s, Allocator allocator = allocator::temp()) => parse(ByteReader{}.init(s), allocator);
-fn Document! load_file (String path, Allocator allocator = allocator::temp()) {
+fn Node! parse_string(String s, Allocator allocator = allocator::temp()) => parse(ByteReader{}.init(s), allocator);
+fn Node! load_file (String path, Allocator allocator = allocator::temp()) {
     File! file = file::open(path, "r");
     defer file.close()!!;
 
@@ -170,31 +168,54 @@ fn Document! load_file (String path, Allocator allocator = allocator::temp()) {
 }
 
 
-fn Document! parse(InStream s, Allocator allocator = allocator::temp())
+fn Node! parse(InStream s, Allocator allocator = allocator::temp())
 {
-	Document document;
-
-	Parser parser = { .buffer = dstring::temp_with_capacity(64), .stream = s, .allocator = allocator, .doc = &document };
+	Node root_node;
+	Parser parser = { .buffer = dstring::temp_with_capacity(64), .stream = s, .allocator = allocator, .active_node = &root_node};
 	defer parser.free();
 
 	while (try parser.advance()) {
 			switch (parser.token) {
 				case START_TAG: {
-					io::printfn("name %s", parser.buffer);
+					if (parser.open_nodes.len() == 0) {
+						// Root node
+						parser.active_node.name = parser.buffer.copy_str();
+					} else {
+						// Push node as child
+						Node* parent_node = parser.open_nodes[parser.open_nodes.len() - 1];
+
+						parent_node.children.push(Node {
+							.name = parser.buffer.copy_str()
+						});
+
+						parser.active_node = &parent_node.children[parent_node.children.len() - 1];
+					}
+				
+					parser.open_nodes.push(parser.active_node);
 					parser.buffer.clear();
+
+					io::printfn("new node %s", parser.active_node.name);
 				}
-				case END_TAG: {}
-				case CLOSE_TAG: {}
+				case END_TAG: {
+					io::printfn("end tag %s", parser.active_node.name);
+				}
+				case CLOSE_TAG: {
+					io::printfn("closing %s %d", parser.open_nodes[parser.open_nodes.len() - 1].name, parser.open_nodes.len());
+					parser.open_nodes.pop()!;
+				}
 				case VALUE: {
 					io::printfn("value %s", parser.buffer);
+					parser.active_node.value = parser.buffer.copy_str();
 					parser.buffer.clear();
 				}
 				case ATTRIBUTE: {
 					io::printfn("attr %s", parser.buffer);
+					parser.active_node.header = parser.buffer.copy_str();
 					parser.buffer.clear();
 				}
 				case HEADER: {
 					io::printfn("header %s", parser.buffer);
+					parser.active_node.header = parser.buffer.copy_str();
 					parser.buffer.clear();
 				}
 				default: {
@@ -203,24 +224,22 @@ fn Document! parse(InStream s, Allocator allocator = allocator::temp())
 			}
 	}
 
-	return document;
+	return root_node;
 }
 
 
 fn void Parser.free(&self)
 {
 	self.buffer.free();
+	self.open_nodes.free();
 }
 
 fn void Node.free(&self)
 {
+	foreach (child: self.children) child.free();
 	self.attributes.free();
 	self.children.free();
 	self.name.free();
 	self.value.free();
 }
 
-fn void Document.free(&self)
-{
-
-}
