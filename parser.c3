@@ -49,8 +49,8 @@ def NodeSearch = fn bool (Node*);
 def ParserSearch = fn bool (char value);
 
 fn void Node.find(&self, NodeSearch search_fn, NodeList* cache) {
-	foreach (child: self.children) child.find(search_fn, cache);
 	if (search_fn(self)) cache.push(self);
+	foreach (child: self.children) child.find(search_fn, cache);
 }
 
 fn void! Parser.advance(&self)
@@ -158,8 +158,8 @@ fn bool! Parser.peek(&self, ParserSearch search)
 }
 
 
-fn Node! parse_string(String s, Allocator allocator = allocator::temp()) => parse(ByteReader{}.init(s), allocator);
-fn Node! load_file (String path, Allocator allocator = allocator::temp()) {
+fn Node! parse_string(String s, Allocator allocator = allocator::heap()) => parse(ByteReader{}.init(s), allocator);
+fn Node! load_file (String path, Allocator allocator = allocator::heap()) {
     File! file = file::open(path, "r");
     defer file.close()!!;
 
@@ -172,7 +172,7 @@ fn Node! load_file (String path, Allocator allocator = allocator::temp()) {
 }
 
 
-fn Node! parse(InStream s, Allocator allocator = allocator::temp())
+fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 {
 	Node root_node;
 	Parser parser = { .buffer = dstring::temp_with_capacity(64), .stream = s, .allocator = allocator, .active_node = &root_node};
