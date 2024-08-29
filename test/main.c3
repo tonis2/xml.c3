@@ -23,7 +23,6 @@ fn void! xml_file_parsing1() {
 }
 
 fn void! xml_file_parsing2() {
-
     xml::Node root_node = xml::load_file("assets/vk_test.xml")!;
     defer root_node.free();
 
@@ -35,23 +34,24 @@ fn void! xml_file_parsing2() {
     List(<Node*>) members;
     defer members.free();
 
-    root_node.find(fn (node) => node.name == "member", &members);
-    assert(members.len() == 9);
-}
-
-fn void! xml_file_parsing2() {
-
-    xml::Node root_node = xml::load_file("assets/vk_test.xml")!;
-    defer root_node.free();
-
-    assert(root_node.name == "registry");
-    assert(root_node.children.len() == 4);
-    assert(root_node.children[0].name == "comment");
-    assert(root_node.children[2].children.len() == 16);
-
-    List(<Node*>) members;
-    defer members.free();
+    List(<Node*>) types;
+    defer types.free();
 
     root_node.find(fn (node) => node.name == "member", &members);
+    root_node.find(fn (node) => node.name == "type" && node.attributes.has_key("category"), &types);
+
     assert(members.len() == 9);
+    assert(types.len() == 3);
+
+    // foreach (value: types) {
+    //     io::printfn("%s", value.attributes.get("name")!, );
+    // }
+    
+    // assert(types[0].attributes.get("name")! == "VkRenderingAttachmentInfoKHR");
+    // assert(types[1].attributes.get("name")! == "VkRenderingFragmentShadingRateAttachmentInfoKHR");
 }
+
+// fn void! xml_file_parsing3() {
+//     xml::Node root_node = xml::load_file("assets/vk.xml")!;
+//     defer root_node.free();
+// }

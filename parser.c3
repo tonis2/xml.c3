@@ -49,8 +49,8 @@ def NodeSearch = fn bool (Node*);
 def ParserSearch = fn bool (char value);
 
 fn void Node.find(&self, NodeSearch search_fn, NodeList* cache) {
-	if (search_fn(self)) cache.push(self);
 	foreach (child: self.children) child.find(search_fn, cache);
+	if (search_fn(self)) cache.push(self);
 }
 
 fn void! Parser.advance(&self)
@@ -211,8 +211,10 @@ fn Node! parse(InStream s, Allocator allocator = allocator::temp())
 				case ATTRIBUTE: {
 					String data = parser.buffer.str_view();
 					usz split_index = data.index_of_char('=')!;
+					bool empty_value = (data.len - split_index) <= 3;
+
 					// Add attribute to hashmap
-					parser.active_node.attributes.set(data[0..split_index - 1].copy(), data[split_index + 2..parser.buffer.len() - 2].copy());
+					parser.active_node.attributes.set(data[0..split_index - 1].copy(), empty_value ? "" : data[split_index + 2..parser.buffer.len() - 2].copy());
 					parser.buffer.clear();
 				}
 				case HEADER: {
