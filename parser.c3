@@ -92,9 +92,13 @@ fn void! Parser.advance(&self)
 			
 			break;
 		}
-		case c == '/' || c == '>': {
+		case c == '>' && (self.token == START_TAG || self.token == ATTRIBUTE): {
 			self.token = END_TAG;
-			self.stream.seek(1, Seek.CURSOR)!;
+			break;
+		}
+		case c == '/' && self.peek(fn (character) => character == '>')!: {
+			self.token = CLOSE_TAG;
+			self.seek(fn (character) => character == '>')!;
 			break;
 		}
 		case c == '<' && self.peek(fn (character) => character == '/')!: {
@@ -200,7 +204,7 @@ fn Node! parse(InStream s, Allocator allocator = allocator::temp())
 					io::printfn("end tag %s", parser.active_node.name);
 				}
 				case CLOSE_TAG: {
-					io::printfn("closing %s %d", parser.open_nodes[parser.open_nodes.len() - 1].name, parser.open_nodes.len());
+					io::printfn("closing %s", parser.open_nodes[parser.open_nodes.len() - 1].name);
 					parser.open_nodes.pop()!;
 				}
 				case VALUE: {
