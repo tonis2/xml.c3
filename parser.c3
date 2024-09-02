@@ -75,7 +75,7 @@ fn void! Parser.advance(&self)
 
 	switch (true)
 	{
-		case c == '<' && self.peek(fn (character) => character == '!')!: {
+		case c == '<' && self.peek(fn (character) => character == '!' || character == '?')! : {
 			self.token = HEADER;
 			self.stream.seek(2, Seek.CURSOR)!;
 			// Parses header value
