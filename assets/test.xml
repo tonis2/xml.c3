@@ -17,6 +17,17 @@
             branch of the member gitlab server.
     </comment>
 
+     <type category="struct" name="VkPipelineColorBlendStateCreateInfo">
+        <member values="VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
+        <member optional="true">const <type>void</type>*            <name>pNext</name></member>
+        <member optional="true"><type>VkPipelineColorBlendStateCreateFlags</type>    <name>flags</name></member>
+        <member><type>VkBool32</type>               <name>logicOpEnable</name></member>
+        <member noautovalidity="true"><type>VkLogicOp</type>              <name>logicOp</name></member>
+        <member optional="true"><type>uint32_t</type>               <name>attachmentCount</name><comment># of pAttachments</comment></member>
+        <member optional="true" len="attachmentCount">const <type>VkPipelineColorBlendAttachmentState</type>* <name>pAttachments</name></member>
+        <member><type>float</type>                  <name>blendConstants</name>[4]</member>
+    </type>
+
 
     <videocapabilities struct="VkVideoDecodeCapabilitiesKHR"/>
     <videoformat name="Decode Output (Coincide)" usage="VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR+VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR">
