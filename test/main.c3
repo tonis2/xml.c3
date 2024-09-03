@@ -48,7 +48,11 @@ fn void! xml_file_parsing2() {
     assert(types[2].attributes.get("name")! == "VkRenderingFragmentDensityMapAttachmentInfoEXT");
 }
 
-// fn void! xml_file_parsing3() {
-//     xml::Node root_node = xml::load_file("assets/vk.xml")!;
-//     defer root_node.free();
-// }
+fn void! xml_file_parsing3() {
+    xml::Node root_node = xml::load_file("assets/test.xml")!;
+    assert(root_node.children.len() == 8);
+    assert(root_node.children[2].children.len() == 2);
+    assert(root_node.children[6].children.len() == 2);
+    assert(root_node.children[7].children.len() == 2);
+    defer root_node.free();
+}

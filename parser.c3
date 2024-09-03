@@ -89,7 +89,6 @@ fn void! Parser.advance(&self)
 			// Parser tag name
 			usz size = self.seek(fn (character) => character == '>' || character == ' ', .return_pos = true)!;
 			for (uint i = 0; i < size; i++) self.buffer.append(self.stream.read_byte()!);
-			
 			break;
 		}
 		case c == '>' && (self.token == START_TAG || self.token == ATTRIBUTE): {
@@ -205,7 +204,9 @@ fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 					parser.open_nodes.pop()!;
 				}
 				case VALUE: {
-					parser.active_node.value = parser.buffer.copy_str();
+					if (parser.open_nodes.len() - 1 > 0) {
+						parser.open_nodes[parser.open_nodes.len() - 1].value = parser.buffer.copy_str();
+					}
 					parser.buffer.clear();
 				}
 				case ATTRIBUTE: {
