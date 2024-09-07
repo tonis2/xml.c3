@@ -197,9 +197,7 @@ fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 					parser.open_nodes.push(parser.active_node);
 					parser.buffer.clear();
 				}
-				case END_TAG: {
-					// io::printfn("end tag %s", parser.active_node.name);
-				}
+				case END_TAG: {}
 				case CLOSE_TAG: {
 					parser.open_nodes.pop()!;
 				}
