@@ -109,7 +109,7 @@ fn void! Parser.advance(&self)
 		case std::ascii::is_print(c) && (self.token == START_TAG || self.token == ATTRIBUTE): {
 			self.token = ATTRIBUTE;
 			//Parser attribute value
-			usz size = self.seek(fn (character) => character == '"', .skip = 1, return_pos: true)!;
+			usz size = self.seek(fn (character) => character == '"', skip: 1, return_pos: true)!;
 			for (uint i; i < size + 1; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
