@@ -31,10 +31,10 @@ fn void! xml_file_parsing2() {
     assert(root_node.children[0].name == "comment");
     assert(root_node.children[2].children.len() == 16);
 
-    List(<Node*>) members;
+    NodeList members;
     defer members.free();
 
-    List(<Node*>) types;
+    NodeList types;
     defer types.free();
 
     root_node.find(fn (node) => node.name == "member", &members);

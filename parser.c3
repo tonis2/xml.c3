@@ -8,14 +8,15 @@ import std::collections::map;
 import std::ascii;
 
 def Attribute = HashMap(<String, String>);
-def NodeList = List(<Node*>);
+def NodePointers = List(<Node*>);
+def NodeList = List(<Node>);
 
 struct Node {
 	String name;
 	String value;
 	String header;
 	Attribute attributes;
-	List(<Node>) children;
+	NodeList children;
 }
 
 struct Parser {
@@ -24,7 +25,7 @@ struct Parser {
 	DString buffer;
 	XMLToken token;
 	Node* active_node;
-	List(<Node*>) open_nodes;
+	NodePointers open_nodes;
 	usz line;
 }
 
@@ -45,12 +46,12 @@ enum XMLToken @local
 	HEADER,
 }
 
-def NodeSearch = fn bool (Node*);
+def NodeSearch = fn bool (Node);
 def ParserSearch = fn bool (char value);
 
-fn void Node.find(&self, NodeSearch search_fn, NodeList* cache) {
+fn void Node.find(self, NodeSearch search_fn, NodeList* cache) {
 	if (search_fn(self)) cache.push(self);
-	foreach (&child: self.children) child.find(search_fn, cache);
+	foreach (child: self.children) child.find(search_fn, cache);
 }
 
 fn void! Parser.advance(&self)
@@ -79,7 +80,7 @@ fn void! Parser.advance(&self)
 			self.token = HEADER;
 			self.stream.seek(2, Seek.CURSOR)!;
 			// Parses header value
-			usz size = self.seek(fn (character) => character == '>', .return_pos = true)!;
+			usz size = self.seek(fn (character) => character == '>', return_pos: true)!;
 			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
@@ -87,7 +88,7 @@ fn void! Parser.advance(&self)
 			self.token = START_TAG;
 			self.stream.seek(1, Seek.CURSOR)!;
 			// Parser tag name
-			usz size = self.seek(fn (character) => character == '>' || character == ' ', .return_pos = true)!;
+			usz size = self.seek(fn (character) => character == '>' || character == ' ', return_pos: true)!;
 			for (uint i = 0; i < size; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
@@ -108,14 +109,14 @@ fn void! Parser.advance(&self)
 		case std::ascii::is_print(c) && (self.token == START_TAG || self.token == ATTRIBUTE): {
 			self.token = ATTRIBUTE;
 			//Parser attribute value
-			usz size = self.seek(fn (character) => character == '"', .skip = 1, .return_pos = true)!;
+			usz size = self.seek(fn (character) => character == '"', .skip = 1, return_pos: true)!;
 			for (uint i; i < size + 1; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
 		case std::ascii::is_print(c): {
 			self.token = VALUE;
 			// Parses value
-			usz size = self.seek(fn (character) => character == '<', .return_pos = true)!;
+			usz size = self.seek(fn (character) => character == '<', return_pos: true)!;
 			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
@@ -203,7 +204,8 @@ fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 				}
 				case VALUE: {
 					if (parser.open_nodes.len() - 1 > 0) {
-						parser.open_nodes[parser.open_nodes.len() - 1].value = parser.buffer.copy_str();
+						Node* node = parser.open_nodes[parser.open_nodes.len() - 1];
+						node.value = parser.buffer.copy_str();
 					}
 					parser.buffer.clear();
 				}
