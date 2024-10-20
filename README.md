@@ -1,6 +1,7 @@
 # xml.c3
 XML parser in C3
 
+-----
 #### Installing
 Add this [file](https://github.com/tonis2/xml.c3/raw/refs/heads/main/xml.c3l) to C3 dependencies folder
 
@@ -8,10 +9,13 @@ And then `xml` to project.json like below
 
 `"dependencies": ["xml"]`
 
---
-
 
 Check tests for examples
+
+
+
+----
+#### Using in code
 
 XML nodes can be searched like below
 
