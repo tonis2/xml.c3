@@ -7,7 +7,7 @@ Check test for examples
 
 XML nodes can be searched like below
 
-```
+```c
   NodeList members;
   defer members.free();
   
