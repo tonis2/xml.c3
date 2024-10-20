@@ -8,7 +8,7 @@ And then `xml` to project.json like below
 
 `"dependencies": ["xml"]`
 
-------
+--
 
 
 Check tests for examples
