@@ -3,7 +3,7 @@ XML parser in C3
 
 
 
-Check test for examples
+Check tests for examples
 
 XML nodes can be searched like below
 
