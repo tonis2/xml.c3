@@ -25,6 +25,7 @@ XML nodes can be searched like below
   
   NodeList types;
   defer types.free();
+
   root_node.find(fn (node) => node.name == "member", &members);
   root_node.find(fn (node) => node.name == "type" && node.attributes.has_key("category"), &types);
   
