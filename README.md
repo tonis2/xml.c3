@@ -19,20 +19,23 @@ Check tests for examples
 
 XML nodes can be searched like below
 
-```c
+```c  
+  xml::Node node = xml::load_file("assets/test.xml")!;
+  defer node.free();
+
   NodeList members;
   defer members.free();
   
   NodeList types;
   defer types.free();
 
-  root_node.find(fn (node) => node.name == "member", &members);
-  root_node.find(fn (node) => node.name == "type" && node.attributes.has_key("category"), &types);
+  node.find(fn (node) => node.name == "member", &members);
+  node.find(fn (node) => node.name == "type" && node.attributes.has_key("category"), &types);
   
   NodeList command_nodes;
   defer command_nodes.free();
 
-  root_node.find(fn (node) => {|
+  node.find(fn (node) => {|
       if (node.name == "command" && node.children.len() > 0) {
           if (node.attributes.has_key("api") && node.attributes["api"]!! == "vulkansc") {
                return false;
