@@ -78,21 +78,23 @@ fn void! Parser.advance(&self)
 	{
 		case c == '<' && self.peek(fn (character) => character == '!' || character == '?')! : {
 			self.token = HEADER;
-			self.stream.seek(2, Seek.CURSOR)!;
+			self.stream.seek(1, CURSOR)!;
 			// Parses header value
-			usz size = self.seek(fn (character) => character == '>', return_pos: true)!;
-			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
+			while (self.peek(fn (character) => character != '>')!) {
+				self.buffer.append(self.stream.read_byte()!);
+			}
+			
 			break;
 		}
 		case c == '<' && self.peek(fn (character) => character != '/')!: {
-			self.token = START_TAG;
-			self.stream.seek(1, Seek.CURSOR)!;
+			self.token = START_TAG;			
 			// Parser tag name
-			usz size = self.seek(fn (character) => character == '>' || character == ' ', return_pos: true)!;
-			for (uint i = 0; i < size; i++) self.buffer.append(self.stream.read_byte()!);
+			while (self.peek(fn (character) => character != '>' && character != ' ')!) {
+				self.buffer.append(self.stream.read_byte()!);
+			}
 			break;
 		}
-		case c == '>' && (self.token == START_TAG || self.token == ATTRIBUTE): {
+		case c == '>' && (self.token == START_TAG || self.token == ATTRIBUTE || self.token == HEADER): {
 			self.token = END_TAG;
 			break;
 		}
@@ -110,14 +112,17 @@ fn void! Parser.advance(&self)
 			self.token = ATTRIBUTE;
 			//Parser attribute value
 			usz size = self.seek(fn (character) => character == '"', skip: 1, return_pos: true)!;
-			for (uint i; i < size + 1; i++) self.buffer.append(self.stream.read_byte()!);
+			for (uint i = 0; i < size + 1; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
 		case std::ascii::is_print(c): {
 			self.token = VALUE;
+			self.stream.seek(-1, CURSOR)!;
 			// Parses value
-			usz size = self.seek(fn (character) => character == '<', return_pos: true)!;
-			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
+			while (self.peek(fn (character) => character != '<')!) {
+				self.buffer.append(self.stream.read_byte()!);
+			}
+			
 			break;
 		}
 		default:
@@ -153,7 +158,7 @@ fn bool! Parser.peek(&self, ParserSearch search)
 {
 	bool response = search(self.stream.read_byte()!);
 	// Set stream back to start pos
-	self.stream.seek(-1, Seek.CURSOR)!;
+	self.stream.seek(-1, CURSOR)!;
 	return response;
 }
 
@@ -191,16 +196,15 @@ fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 						parent_node.children.push(Node {
 							.name = parser.buffer.copy_str()
 						});
-
+					
 						parser.active_node = &parent_node.children[parent_node.children.len() - 1];
 					}
-				
 					parser.open_nodes.push(parser.active_node);
 					parser.buffer.clear();
 				}
 				case END_TAG: {}
 				case CLOSE_TAG: {
-					parser.open_nodes.pop()!;
+					if (parser.open_nodes.len() > 0) parser.open_nodes.pop()!;
 				}
 				case VALUE: {
 					if (parser.open_nodes.len() - 1 > 0) {
