@@ -180,7 +180,7 @@ fn Node! load_file (String path, Allocator allocator = allocator::heap()) {
 fn Node! parse(InStream s, Allocator allocator = allocator::heap())
 {
 	Node root_node;
-	Parser parser = { .buffer = dstring::temp_with_capacity(2024), .stream = s, .allocator = allocator, .active_node = &root_node};
+	Parser parser = { .buffer = dstring::new_with_capacity(2024), .stream = s, .allocator = allocator, .active_node = &root_node};
 	defer parser.free();
 
 	while (try parser.advance()) {
