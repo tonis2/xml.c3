@@ -35,7 +35,7 @@ XML nodes can be searched like below
   NodeList command_nodes;
   defer command_nodes.free();
 
-  node.find(fn (node) => {|
+  node.find(fn (node) => {
       if (node.name == "command" && node.children.len() > 0) {
           if (node.attributes.has_key("api") && node.attributes["api"]!! == "vulkansc") {
                return false;
@@ -43,6 +43,6 @@ XML nodes can be searched like below
           return true;
       }
       return false;
-  |}, &command_nodes);
+  }, &command_nodes);
 ```
 
