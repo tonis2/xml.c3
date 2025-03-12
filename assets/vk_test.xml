@@ -45,6 +45,13 @@ branch of the member gitlab server.
             <member><type>VkImageLayout</type>                                                              <name>imageLayout</name></member>
             <member><type>VkExtent2D</type>                                                                 <name>shadingRateAttachmentTexelSize</name></member>
         </type>
+        <type category="struct" name="test" structextends="VkRenderingInfo">
+            <member values="VK_STRUCTURE_TYPE_RENDERING_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
+            <member optional="true">const <type>void</type>*                                               <name>pNext</name></member>
+            <member optional="true"><type>VkImageView</type>                                                <name>imageView</name></member>
+            <member><type>VkImageLayout</type>                                                              <name>imageLayout</name></member>
+            <member><type>VkExtent2D</type>                                                                 <name>shadingRateAttachmentTexelSize</name></member>
+        </type>
         <type category="struct" name="VkRenderingFragmentDensityMapAttachmentInfoEXT" structextends="VkRenderingInfo">
             <member values="VK_STRUCTURE_TYPE_RENDERING_FRAGMENT_DENSITY_MAP_ATTACHMENT_INFO_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true">const <type>void</type>*                                                <name>pNext</name></member>

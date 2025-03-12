@@ -8,7 +8,12 @@
 	"features": [],
 	"linked-libraries": [],
 	"sources": ["./*"],
+	"script-dir": "./",
 	"targets": {
+		"zip": {
+			"type": "prepare",
+			"exec": ["zip ../xml.c3l ./*.c3 ./manifest.json"]
+		},
 		"main": {
 			"type": "executable",
 			"sources-add": ["./test/*"]
