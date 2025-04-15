@@ -25,6 +25,8 @@ struct Parser {
 	XMLToken token;
 	Node* active_node;
 	NodePointers open_nodes;
+	Node root;
+	DynamicArenaAllocator allocator;
 	usz line;
 }
 
@@ -153,7 +155,7 @@ fn bool? Parser.peek(&self, ParserSearch search)
 
 
 // fn Node? parse_string(String s, Allocator allocator = allocator::heap()) => parse((ByteReader){}.init(s), allocator);
-fn Node? load_file (String path) {
+fn Parser? load_file (String path) {
     File? file = file::open(path, "r");
     defer file.close()!!;
 
@@ -166,27 +168,24 @@ fn Node? load_file (String path) {
 }
 
 
-fn Node? parse(InStream s)
+fn Parser? parse(InStream s)
 {
-	DynamicArenaAllocator allocator;
-    allocator.init(allocator: allocator::heap(), page_size: 256);
-
 	Node root_node;
-
 	Parser parser = { .buffer = dstring::temp_with_capacity(64), .stream = s, .active_node = &root_node};
-	defer parser.free();
+
+	parser.allocator.init(allocator: allocator::heap(), page_size: 256);
 
 	while (try parser.advance()) {
 			switch (parser.token) {
 				case START_TAG: {
 					if (parser.open_nodes.len() == 0) {
 						// Root node
-						parser.active_node.name = parser.buffer.copy_str(&allocator);
+						parser.active_node.name = parser.buffer.copy_str(&parser.allocator);
 					} else {
 						// Push node as child
 						Node* parent_node = parser.open_nodes[parser.open_nodes.len() - 1];
 						Node child = {
-							.name = parser.buffer.copy_str(&allocator)
+							.name = parser.buffer.copy_str(&parser.allocator)
 						};
 
 						parent_node.children.push(child);
@@ -203,7 +202,7 @@ fn Node? parse(InStream s)
 				case VALUE: {
 					if (parser.open_nodes.len() - 1 > 0) {
 						Node* node = parser.open_nodes[parser.open_nodes.len() - 1];
-						node.value = parser.buffer.copy_str(&allocator);
+						node.value = parser.buffer.copy_str(&parser.allocator);
 					}
 					parser.buffer.clear();
 				}
@@ -213,11 +212,11 @@ fn Node? parse(InStream s)
 					bool empty_value = (data.len - split_index) <= 3;
 
 					// Add attribute to hashmap
-					parser.active_node.attributes.set(data[0..split_index - 1].copy(&allocator), empty_value ? "" : data[split_index + 2..parser.buffer.len() - 2].copy(&allocator));
+					parser.active_node.attributes.set(data[0..split_index - 1].copy(&parser.allocator), empty_value ? "" : data[split_index + 2..parser.buffer.len() - 2].copy(&parser.allocator));
 					parser.buffer.clear();
 				}
 				case HEADER: {
-					parser.active_node.header = parser.buffer.copy_str(&allocator);
+					parser.active_node.header = parser.buffer.copy_str(&parser.allocator);
 					parser.buffer.clear();
 				}
 				default: {
@@ -226,19 +225,21 @@ fn Node? parse(InStream s)
 			}
 	}
 
-	allocator.free();
-	return root_node;
+	parser.root = root_node;
+	return parser;
 }
 
 
 fn void Parser.free(&self)
 {
+	self.allocator.free();
 	self.buffer.free();
 	self.open_nodes.free();
+	self.root.free();
 }
 
 fn void Node.free(&self)
-{
+{	
 	foreach (child: self.children) child.free();
 	self.attributes.free();
 	self.children.free();
