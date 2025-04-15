@@ -2,7 +2,7 @@
 	"langrev": "1",
 	"warnings": ["no-unused"],
 	"authors": [],
-	"version": "0.1.0",
+	"version": "0.1.2",
 	"dependency-search-paths": [],
 	"dependencies": [],
 	"features": [],
@@ -12,7 +12,7 @@
 	"targets": {
 		"zip": {
 			"type": "prepare",
-			"exec": ["zip ../xml.c3l ./*.c3 ./manifest.json"]
+			"exec": ["zip xml.c3l ./*.c3 ./manifest.json"]
 		},
 		"main": {
 			"type": "executable",
