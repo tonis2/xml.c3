@@ -20,8 +20,10 @@ Check tests for examples
 XML nodes can be searched like below
 
 ```c  
-  xml::Node node = xml::load_file("assets/test.xml")!;
-  defer node.free();
+  xml::Parser parser = xml::load_file("assets/test.xml")!!;
+  defer parser.free();
+
+  Node node = parser.root;
 
   NodeList members;
   defer members.free();
