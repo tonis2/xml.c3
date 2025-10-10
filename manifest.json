@@ -1,15 +1,9 @@
-
 { 
   "provides" : "xml",
   "targets" : {
-    "macos-x64" : {
-      "linked-libs" : []
-    },
-    "linux-x64" : {
-      "linked-libs" : []
-    },
-	  "windows-x64" : {
-      "linked-libs" : []
-    }
+    "macos-x64" : {},
+    "macos-aarch64" : {},
+    "linux-x64" : {},
+    "windows-x64" : {}
   }
 }
