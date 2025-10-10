@@ -2,21 +2,17 @@
 	"langrev": "1",
 	"warnings": ["no-unused"],
 	"authors": [],
-	"version": "0.1.2",
+	"version": "0.1.6",
 	"dependency-search-paths": [],
 	"dependencies": [],
 	"features": [],
-	"linked-libraries": [],
-	"sources": ["./*"],
 	"script-dir": "./",
+	"linked-libraries": [],
+	"sources": ["./test/*", "./src/*"],
 	"targets": {
 		"zip": {
 			"type": "prepare",
-			"exec": ["zip xml.c3l ./*.c3 ./manifest.json"]
-		},
-		"main": {
-			"type": "executable",
-			"sources-add": ["./test/*"]
+			"exec": ["zip ./xml.c3l ./src/*.c3 ./manifest.json"]
 		}
 	},
 	"output": "./build"
