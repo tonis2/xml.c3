@@ -102,14 +102,14 @@ fn void? Parser.advance(&self)
 			self.seek(fn (character) => character == '>')!;
 			break;
 		}
-		case std::ascii::is_print(c) && (self.token == START_TAG || self.token == ATTRIBUTE): {
+        case std::core::ascii::is_print(c) && (self.token == START_TAG || self.token == ATTRIBUTE): {
 			self.token = ATTRIBUTE;
 			//Parser attribute value
 			usz size = self.seek(fn (character) => character == '"', skip: 1, return_pos: true)!;
 			for (uint i; i < size + 1; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
-		case std::ascii::is_print(c): {
+        case std::core::ascii::is_print(c): {
 			self.token = VALUE;
 			// Parses value
 			usz size = self.seek(fn (character) => character == '<', return_pos: true)!;
@@ -173,7 +173,7 @@ fn Parser? parse(InStream s)
 	Node root_node;
 	Parser parser = { .buffer = dstring::temp_with_capacity(64), .stream = s, .active_node = &root_node};
 
-	parser.allocator.init(allocator: allocator::heap(), page_size: 256);
+	parser.allocator.init(allocator: mem, page_size: 256);
 
 	while (try parser.advance()) {
 			switch (parser.token) {
