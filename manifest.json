@@ -1,5 +1,6 @@
 { 
   "provides" : "xml",
+  "sources": ["src/parser.c3"],
   "targets" : {
     "macos-x64" : {},
     "macos-aarch64" : {},

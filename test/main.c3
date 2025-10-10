@@ -48,7 +48,6 @@ fn void xml_file_parsing2() {
     node.find(fn (node) => node.name == "member", &members);
     node.find(fn (node) => node.name == "type" && node.attributes.has_key("category"), &types);
 
-
     node.find(fn (node) {
         if (node.name == "type" && node.attributes.has_key("name") && node.attributes["name"]!! == "test") {
             Node child_node = node.children[0];
