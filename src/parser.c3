@@ -53,7 +53,7 @@ fn void Node.find(self, NodeSearch search_fn, NodeList* cache) {
 fn void? Parser.advance(&self)
 {
 	char c;
-	while WS: (c = self.stream.read_byte()!)
+	while WS: ((c = self.stream.read_byte()!))
 	{
 		switch (c)
 		{
@@ -118,7 +118,7 @@ fn void? Parser.advance(&self)
 		}
 		default:
 			io::printfn("not found char %c", c);
-			return UNEXPECTED_CHARACTER?;
+			return UNEXPECTED_CHARACTER~;
 	}
 }
 
@@ -130,7 +130,7 @@ fn usz? Parser.seek(&self, ParserSearch search, uint skip = 0, bool return_pos =
 	uint skipped = 0;
 	char c;
 	// Find the char
-	while (c = self.stream.read_byte()!) {
+	while ((c = self.stream.read_byte()!)) {
 		offset++;
 		if (search(c)) {
 			if (skipped == skip) {break;}
@@ -161,7 +161,7 @@ fn Parser? load_file (String path) {
 
     if (catch err = file) {
         io::printfn("Failed to find the xml file");
-        return FILE_NOT_FOUND?;
+        return FILE_NOT_FOUND~;
     }
 
     return parse(&file);
