@@ -2,9 +2,20 @@
   "provides" : "xml",
   "sources": ["src/parser.c3"],
   "targets" : {
-    "macos-x64" : {},
-    "macos-aarch64" : {},
-    "linux-x64" : {},
-    "windows-x64" : {}
+    "macos-x64" : {
+      "linked-libraries" : []
+    },
+    "macos-aarch64" : {
+      "linked-libraries" : []
+    },
+    "linux-x64" : {
+      "linked-libraries" : []
+    },
+    "linux-aarch64" : {
+      "linked-libraries" : []
+    },
+	  "windows-x64" : {
+      "linked-libraries" : []
+    }
   }
 }

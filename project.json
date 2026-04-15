@@ -1,19 +1,21 @@
 {
-	"langrev": "1",
-	"warnings": ["no-unused"],
-	"authors": [],
-	"version": "0.1.6",
-	"dependency-search-paths": [],
-	"dependencies": [],
-	"features": [],
-	"script-dir": "./",
-	"linked-libraries": [],
-	"sources": ["./test/*", "./src/*"],
-	"targets": {
-		"zip": {
-			"type": "prepare",
-			"exec": ["zip ./xml.c3l ./src/*.c3 ./manifest.json"]
-		}
-	},
-	"output": "./build"
+  // Language version of C3.
+  "langrev": "1",
+  "warnings": [ "no-unused" ],
+  "dependency-search-paths": [ "src" ],
+  "dependencies": [],
+  "authors": [ "John Doe <john.doe@example.com>" ],
+  "version": "0.1.0",
+  "sources": [ "src/**" ],
+  "test-sources": [ "test/**" ],
+  "build-dir": "build",
+  "output": "build",
+  "script-dir": "./",
+  "targets": {
+    "xml": {
+      "type": "executable"
+    }
+  },
+  "cpu": "generic",
+  "opt": "O0"
 }
