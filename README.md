@@ -3,7 +3,7 @@ XML parser in C3
 
 -----
 #### Installing
-Add this [file](https://github.com/tonis2/xml.c3/raw/refs/heads/main/xml.c3l) to C3 dependencies folder
+Add this [file](https://github.com/tonis2/xml.c3/releases/download/latest/xml.c3l) to C3 dependencies folder
 
 And then `xml` to project.json like below
 
