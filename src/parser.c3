@@ -5,7 +5,7 @@ import std::core;
 import std::math;
 import std::collections::list;
 import std::collections::map;
-import std::ascii;
+import std::core::ascii;
 
 alias Attribute = HashMap{String, String};
 alias NodePointers = List{Node*};
@@ -27,7 +27,7 @@ struct Parser {
 	NodePointers open_nodes;
 	Node root;
 	DynamicArenaAllocator allocator;
-	usz line;
+	sz line;
 }
 
 faultdef EOF, UNEXPECTED_CHARACTER, FILE_NOT_FOUND;
@@ -74,17 +74,17 @@ fn void? Parser.advance(&self)
 	{
 		case c == '<' && self.peek(fn (character) => character == '!' || character == '?')! : {
 			self.token = HEADER;
-			self.stream.seek(2, Seek.CURSOR)!;
+			self.stream.seek(2, FROM_CURSOR)!;
 			// Parses header value
-			usz size = self.seek(fn (character) => character == '>', return_pos: true)!;
+			sz size = self.seek(fn (character) => character == '>', return_pos: true)!;
 			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
 		case c == '<' && self.peek(fn (character) => character != '/')!: {
 			self.token = START_TAG;
-			self.stream.seek(1, Seek.CURSOR)!;
+			self.stream.seek(1, FROM_CURSOR)!;
 			// Parser tag name
-			usz size = self.seek(fn (character) => character == '>' || character == ' ', return_pos: true)!;
+			sz size = self.seek(fn (character) => character == '>' || character == ' ', return_pos: true)!;
 			for (uint i = 0; i < size; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
@@ -105,14 +105,14 @@ fn void? Parser.advance(&self)
         case std::core::ascii::is_print(c) && (self.token == START_TAG || self.token == ATTRIBUTE): {
 			self.token = ATTRIBUTE;
 			//Parser attribute value
-			usz size = self.seek(fn (character) => character == '"', skip: 1, return_pos: true)!;
+			sz size = self.seek(fn (character) => character == '"', skip: 1, return_pos: true)!;
 			for (uint i; i < size + 1; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
         case std::core::ascii::is_print(c): {
 			self.token = VALUE;
 			// Parses value
-			usz size = self.seek(fn (character) => character == '<', return_pos: true)!;
+			sz size = self.seek(fn (character) => character == '<', return_pos: true)!;
 			for (uint i; i < size; i++) self.buffer.append(self.stream.read_byte()!);
 			break;
 		}
@@ -124,9 +124,9 @@ fn void? Parser.advance(&self)
 
 
 
-fn usz? Parser.seek(&self, ParserSearch search, uint skip = 0, bool return_pos = false)
+fn sz? Parser.seek(&self, ParserSearch search, uint skip = 0, bool return_pos = false)
 {
-	usz offset;
+	sz offset;
 	uint skipped = 0;
 	char c;
 	// Find the char
@@ -141,7 +141,7 @@ fn usz? Parser.seek(&self, ParserSearch search, uint skip = 0, bool return_pos =
 		};
 	};
 
-	if (return_pos) self.stream.seek(-(offset + 1), Seek.CURSOR)!;
+	if (return_pos) self.stream.seek(-(offset + 1), FROM_CURSOR)!;
 	return offset;
 }
 
@@ -149,7 +149,7 @@ fn bool? Parser.peek(&self, ParserSearch search)
 {
 	bool response = search(self.stream.read_byte()!);
 	// Set stream back to start pos
-	self.stream.seek(-1, Seek.CURSOR)!;
+	self.stream.seek(-1, FROM_CURSOR)!;
 	return response;
 }
 
@@ -208,7 +208,7 @@ fn Parser? parse(InStream s)
 				}
 				case ATTRIBUTE: {
 					String data = parser.buffer.str_view();
-					usz split_index = data.index_of_char('=')!;
+					sz split_index = data.index_of_char('=')!;
 					bool empty_value = (data.len - split_index) <= 3;
 
 					// Add attribute to hashmap
